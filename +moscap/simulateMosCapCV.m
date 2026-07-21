@@ -42,7 +42,7 @@ Vg = params.Vg;
 n = numel(Vg);
 psi = zeros(1, n);
 Cs = zeros(1, n);
-Cideal = Cox * ones(1, n);
+Cideal = Cox_eff * ones(1, n);
 Clow = zeros(1, n);
 Chigh = zeros(1, n);
 CmeasLow = zeros(1, n);
@@ -149,11 +149,35 @@ for i = 1:n
     CinvAddLow = invWeight * max(min(params.invGain, 1), 0) * genLow * Cinv_qsLow;
     CinvAddHigh = invWeight * max(min(params.invGain, 1), 0) * genHigh * Cinv_qsHigh;
 
-    Clow(i) = min(CbaseLow + CinvAddLow, Cox_eff + Cpar);
-    Chigh(i) = min(CbaseHigh + CinvAddHigh, Cox_eff + Cpar);
+    Clow(i) = real(min(CbaseLow + CinvAddLow, Cox_eff + Cpar));
+    Chigh(i) = real(min(CbaseHigh + CinvAddHigh, Cox_eff + Cpar));
+    
+    if ~isfinite(Clow(i))
+        Clow(i) = max(0, CbaseLow);
+    end
+    if ~isfinite(Chigh(i))
+        Chigh(i) = max(0, CbaseHigh);
+    end
+    if Clow(i) < 0
+        Clow(i) = 0;
+    end
+    if Chigh(i) < 0
+        Chigh(i) = 0;
+    end
 
-    CmeasLow(i) = Clow(i) / (1 + (omegaLow * max(params.Rs, 0) * Clow(i)) ^ 2);
-    CmeasHigh(i) = Chigh(i) / (1 + (omegaHigh * max(params.Rs, 0) * Chigh(i)) ^ 2);
+    Rs_eff = max(params.Rs, 0);
+    denom_low = 1 + (omegaLow * Rs_eff * max(Clow(i), 1e-30)) ^ 2;
+    denom_high = 1 + (omegaHigh * Rs_eff * max(Chigh(i), 1e-30)) ^ 2;
+    
+    CmeasLow(i) = real(Clow(i) / max(denom_low, 1e-30));
+    CmeasHigh(i) = real(Chigh(i) / max(denom_high, 1e-30));
+    
+    if ~isfinite(CmeasLow(i))
+        CmeasLow(i) = Clow(i);
+    end
+    if ~isfinite(CmeasHigh(i))
+        CmeasHigh(i) = Chigh(i);
+    end
 end
 
 if params.smoothWindow > 1
@@ -163,6 +187,22 @@ if params.smoothWindow > 1
     CmeasLow = movmean(CmeasLow, w, 'Endpoints', 'shrink');
     CmeasHigh = movmean(CmeasHigh, w, 'Endpoints', 'shrink');
 end
+
+% Ensure all output is real and finite
+Clow = real(Clow);
+Chigh = real(Chigh);
+CmeasLow = real(CmeasLow);
+CmeasHigh = real(CmeasHigh);
+
+Clow(~isfinite(Clow)) = 0;
+Chigh(~isfinite(Chigh)) = 0;
+CmeasLow(~isfinite(CmeasLow)) = 0;
+CmeasHigh(~isfinite(CmeasHigh)) = 0;
+
+Clow(Clow < 0) = 0;
+Chigh(Chigh < 0) = 0;
+CmeasLow(CmeasLow < 0) = 0;
+CmeasHigh(CmeasHigh < 0) = 0;
 
 sim = struct();
 sim.Vg = Vg;

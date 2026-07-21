@@ -78,8 +78,8 @@ headerNonIdeal.Layout.Row = 5;
 
 panelNonIdeal = uipanel(panelGrid, 'Title', '');
 panelNonIdeal.Layout.Row = 6;
-nonIdealGrid = uigridlayout(panelNonIdeal, [10, 3]);
-nonIdealGrid.RowHeight = repmat({25}, 1, 10);
+nonIdealGrid = uigridlayout(panelNonIdeal, [12, 3]);
+nonIdealGrid.RowHeight = repmat({25}, 1, 12);
 nonIdealGrid.ColumnWidth = {140, '1x', 90};
 nonIdealGrid.Padding = [2 2 2 2];
 nonIdealGrid.RowSpacing = 4;
@@ -119,6 +119,8 @@ controls.Cbt = moscap.guiHelpers.addSlider(nonIdealGrid, spec.Cbt);
 controls.tauBt = moscap.guiHelpers.addSlider(nonIdealGrid, spec.tauBt);
 controls.Cpar = moscap.guiHelpers.addSlider(nonIdealGrid, spec.Cpar);
 controls.stretch = moscap.guiHelpers.addSlider(nonIdealGrid, spec.stretch);
+controls.invGain = moscap.guiHelpers.addSlider(nonIdealGrid, spec.invGain);
+controls.invWidth = moscap.guiHelpers.addSlider(nonIdealGrid, spec.invWidth);
 
 % === SETUP STATE AND INITIAL PLOT ===
 state = struct();
@@ -148,6 +150,8 @@ setSliderCallback(controls.Cpar);
 setSliderCallback(controls.stretch);
 setSliderCallback(controls.Rs);
 setSliderCallback(controls.smooth);
+setSliderCallback(controls.invGain);
+setSliderCallback(controls.invWidth);
 setSliderCallback(controls.tauGen);
 
 updateMetricsLabel();
@@ -242,6 +246,8 @@ updateMetricsLabel();
         p.Rs = controls.Rs.slider.Value;
         p.smoothWindow = max(1, round(controls.smooth.slider.Value));
         p.tau_gen = controls.tauGen.slider.Value * 1e-6;
+        p.invGain = max(min(controls.invGain.slider.Value, 1), 0);
+        p.invWidth = max(controls.invWidth.slider.Value, 0.01);
         p.lfFreqHz = 1;
         p.hfFreqHz = 1e6;
 

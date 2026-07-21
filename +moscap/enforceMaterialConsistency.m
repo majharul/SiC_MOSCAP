@@ -9,7 +9,7 @@ if resetDoping
     switch lower(strtrim(params.material))
         case {'4h-sic', 'sic'}
             params = applySiCProcessPreset(params);
-        otherwise
+        otherwise % Si
             params.Na_peak = 5e23;
             params.Npoly = 1e25;
             params.Rp = 0.25e-6;
@@ -53,7 +53,7 @@ switch processName
         params.tau_gen = 1e-3;
         params.phiF_cap = 0.75;
         params.invWidth = 0.18;
-        params.forceLowFreqInversion = true;
+        params.forceLowFreqInversion = false;
     case {'pass1-run1', 'w1-w6'}
         params.Na_peak = 5e14 * 1e6;
         params.Npoly = 5e24;
@@ -63,7 +63,7 @@ switch processName
         params.tau_gen = 2e-3;
         params.phiF_cap = 0.80;
         params.invWidth = 0.20;
-        params.forceLowFreqInversion = true;
+        params.forceLowFreqInversion = false;
     case {'pass1-run2', 'w7', 'w9', 'w11'}
         params.Na_peak = 5e14 * 1e6;
         params.Npoly = 5e24;
@@ -73,7 +73,7 @@ switch processName
         params.tau_gen = 2e-3;
         params.phiF_cap = 0.82;
         params.invWidth = 0.22;
-        params.forceLowFreqInversion = true;
+        params.forceLowFreqInversion = false;
     case {'run2-2022', 'w1&2'}
         params.Na_peak = 1e15 * 1e6;
         params.Npoly = 5e24;
@@ -83,7 +83,7 @@ switch processName
         params.tau_gen = 3e-3;
         params.phiF_cap = 0.85;
         params.invWidth = 0.24;
-        params.forceLowFreqInversion = true;
+        params.forceLowFreqInversion = false;
     otherwise
         params.Na_peak = 8e22;
         params.Npoly = 5e24;
@@ -94,7 +94,7 @@ switch processName
         params.phiF_cap = 0.85;
         params.invGain = 1.0;
         params.invWidth = 0.18;
-        params.forceLowFreqInversion = true;
+        params.forceLowFreqInversion = false;
         params.sicProcess = 'custom';
 end
 end

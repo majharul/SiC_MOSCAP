@@ -14,7 +14,7 @@ else
     curves.meas = plot(ax, measured.Vg, real(moscap.getMeasuredCgg(measured)), 'ko', 'MarkerSize', 4, 'LineWidth', 1.0);
 end
 
-legend(ax, {'Without Rs High-frequency response', 'With Impedence', 'Static Cox', 'Measured'}, 'Location', 'best');
+legend(ax, {'Low-Frequency (τ_gen-limited)', 'High-Frequency (trap-limited)', 'Ideal: Cox (no defects)', 'Measured'}, 'Location', 'best');
 grid(ax, 'on');
 end
 

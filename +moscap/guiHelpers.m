@@ -133,6 +133,10 @@ classdef guiHelpers
             spec.smooth.step = 1;
             spec.tauGen = moscap.guiHelpers.makePositiveSpec('tau_gen [us]', params.tau_gen * 1e6, 5, 0.01, 1e6, '%.3g');
             spec.tauGen.step = 0.1;
+            spec.invGain = moscap.guiHelpers.makePositiveSpec('invGain [0-1]', max(min(params.invGain, 1), 0), 0.5, 0, 1, '%.2f');
+            spec.invGain.step = 0.05;
+            spec.invWidth = moscap.guiHelpers.makePositiveSpec('invWidth [V]', max(params.invWidth, 0.01), 0.2, 0.01, 1, '%.2f');
+            spec.invWidth.step = 0.01;
         end
 
         function applySliderStep(sliderObj, minV, maxV, stepV)

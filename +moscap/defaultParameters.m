@@ -8,8 +8,8 @@ params.k = 1.380649e-23;
 
 params.T = 300;
 params.eps_ox = 3.9 * params.eps0;
-params.material = 'SiC';
-params.sicProcess = 'RUN2-2022';
+params.material = 'Si';
+params.sicProcess = 'none';
 [params.eps_si, params.ni] = moscap.materialProperties(params.material, params.eps0);
 
 % Geometry
@@ -51,12 +51,13 @@ params.Rs = 500;                    % ohm
 params.Vg = linspace(-10, 15, 1001);
 
 % Numerical smoothing for occasional point-to-point artifacts.
-params.smoothWindow = 5;
+params.smoothWindow = 10;
 
 % Inversion response calibration via carrier generation/recombination time.
-params.tau_gen = 9e-6;              % s
+params.tau_gen = 9e-6;              % s (Si: 5-10 us for fast inversion; SiC: 1-3 ms for slow)
 params.invGain = 1.0;               % 0..1 scaling for inversion recovery
-params.forceLowFreqInversion = false; % set true to show low-frequency inversion branch
+params.invWidth = 0.12;             % V, smoothing width for inversion transition
+params.forceLowFreqInversion = false; % set true to show low-frequency inversion branch (for teaching)
 params.phiF_cap = 3.1;              % V, cap to avoid unrealistically high phiF in compact fitting
 
 params = moscap.enforceMaterialConsistency(params, true);
