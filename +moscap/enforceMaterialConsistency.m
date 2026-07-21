@@ -9,6 +9,8 @@ if resetDoping
     switch lower(strtrim(params.material))
         case {'4h-sic', 'sic'}
             params = applySiCProcessPreset(params);
+            % SiC has sharp inversion weight transitions in deep depletion; use stronger smoothing
+            params.smoothWindow = max(params.smoothWindow, 15);
         otherwise % Si
             params.Na_peak = 5e23;
             params.Npoly = 1e25;
@@ -20,6 +22,7 @@ if resetDoping
             params.invWidth = 0.12;
             params.forceLowFreqInversion = false;
             params.sicProcess = 'none';
+            % Si has smoother transitions; default smoothing (10) is sufficient
     end
 end
 
@@ -52,7 +55,7 @@ switch processName
         params.xmax = 6e-6;
         params.tau_gen = 1e-3;
         params.phiF_cap = 0.75;
-        params.invWidth = 0.18;
+        params.invWidth = 0.50;  % Increased for smooth inversion transition
         params.forceLowFreqInversion = false;
     case {'pass1-run1', 'w1-w6'}
         params.Na_peak = 5e14 * 1e6;
@@ -62,7 +65,7 @@ switch processName
         params.xmax = 8e-6;
         params.tau_gen = 2e-3;
         params.phiF_cap = 0.80;
-        params.invWidth = 0.20;
+        params.invWidth = 0.55;  % Increased for smooth inversion transition
         params.forceLowFreqInversion = false;
     case {'pass1-run2', 'w7', 'w9', 'w11'}
         params.Na_peak = 5e14 * 1e6;
@@ -72,7 +75,7 @@ switch processName
         params.xmax = 8e-6;
         params.tau_gen = 2e-3;
         params.phiF_cap = 0.82;
-        params.invWidth = 0.22;
+        params.invWidth = 0.52;  % Increased for smooth inversion transition
         params.forceLowFreqInversion = false;
     case {'run2-2022', 'w1&2'}
         params.Na_peak = 1e15 * 1e6;
@@ -82,7 +85,7 @@ switch processName
         params.xmax = 12e-6;
         params.tau_gen = 3e-3;
         params.phiF_cap = 0.85;
-        params.invWidth = 0.24;
+        params.invWidth = 0.60;  % Increased for smooth inversion transition
         params.forceLowFreqInversion = false;
     otherwise
         params.Na_peak = 8e22;
@@ -93,7 +96,7 @@ switch processName
         params.tau_gen = 2e-3;
         params.phiF_cap = 0.85;
         params.invGain = 1.0;
-        params.invWidth = 0.18;
+        params.invWidth = 0.55;  % Increased for smooth inversion transition
         params.forceLowFreqInversion = false;
         params.sicProcess = 'custom';
 end
