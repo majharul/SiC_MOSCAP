@@ -23,7 +23,7 @@ end
 
 dF = (-exp_neg + 1 + (ni / Na) ^ 2 * (exp_pos - 1)) / Vt;
 
-psiScale = max(1e-5, 0.4 * Vt);
+psiScale = max(1e-5, 2.4 * Vt);
 sgn = tanh(psi / psiScale);
 sgn = real(sgn);
 if ~isfinite(sgn)

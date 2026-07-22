@@ -117,6 +117,10 @@ for i = 1:n
     if isfield(params, 'invWidth')
         invWidth = max(params.invWidth, 0.01);
     end
+    
+    % Smooth inversion weight transition using tanh (gradual S-curve)
+    % The tanh naturally creates a smooth step from 0 to 1 around psi_i = 2*phiF
+    % Use (psi_i - 2*phiF) / invWidth where larger invWidth = smoother transition
     invWeight = 0.5 * (1 + tanh((psi_i - 2 * phiF) / invWidth));
 
     tauEff = max(params.tau_gen, 1e-12);
@@ -186,6 +190,14 @@ if params.smoothWindow > 1
     Chigh = movmean(Chigh, w, 'Endpoints', 'shrink');
     CmeasLow = movmean(CmeasLow, w, 'Endpoints', 'shrink');
     CmeasHigh = movmean(CmeasHigh, w, 'Endpoints', 'shrink');
+end
+
+% For 4H-SiC with slow tau_gen, apply additional smoothing to reduce discontinuities
+% from sharp inversion weight transitions in deep depletion region
+if strcmpi(strtrim(params.material), '4H-SiC') && params.tau_gen > 1e-4
+    % Apply a second pass of smoothing to blend the inversion transition
+    w2 = max(5, round(0.5 * params.smoothWindow));
+    Clow = movmean(Clow, w2, 'Endpoints', 'shrink');
 end
 
 % Ensure all output is real and finite

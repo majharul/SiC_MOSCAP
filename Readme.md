@@ -11,12 +11,12 @@ A modular MATLAB framework for simulating MOS capacitor C-V characteristics with
 - Provides both batch execution and an interactive MATLAB GUI
 ## Preview of the MOSCAP Visualizer
 
-![MOSCAP_behavior](MOSCAP_CV_behavior_with_non_ideal_scnerio.gif)
+![MOSCAP_behavior](docs\MOSCAP_CV_behavior_with_non_ideal_scnerio.gif)
 
-![MOSCAP_behavior_2](Video_preview_moscap_visualizer_with_non_ideal.mp4)
+![MOSCAP_behavior_2](docs\Video_preview_moscap_visualizer_with_non_ideal.mp4)
 
 Video Preview
-![MOSCAP_si_behavioir_3](MOSCAP_C_V_model.gif)
+![MOSCAP_si_behavioir_3](docs\MOSCAP_C_V_model.gif)
 
 
 ## Core Equations
