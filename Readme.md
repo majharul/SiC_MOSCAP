@@ -14,6 +14,11 @@ A modular MATLAB framework for simulating MOS capacitor C-V characteristics with
 ![MOSCAP_behavior](MOSCAP_CV_behavior_with_non_ideal_scnerio.gif)
 
 ![MOSCAP_behavior_2](Video_preview_moscap_visualizer_with_non_ideal.mp4)
+
+Video Preview
+![MOSCAP_si_behavioir_3](MOSCAP_C_V_model.gif)
+
+
 ## Core Equations
 
 Gate-voltage relation:
