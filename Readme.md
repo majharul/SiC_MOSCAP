@@ -9,7 +9,11 @@ A modular MATLAB framework for simulating MOS capacitor C-V characteristics with
 - Includes SiC-specific non-ideal behavior driven by `Dit`, carrier generation, frequency dispersion, and fixed oxide charge
 - Compares simulation against measured C-V data
 - Provides both batch execution and an interactive MATLAB GUI
+## Preview of the MOSCAP Visualizer
 
+![MOSCAP_behavior](MOSCAP_CV_behavior_with_non_ideal_scnerio.gif)
+
+![MOSCAP_behavior_2](Video_preview_moscap_visualizer_with_non_ideal.mp4)
 ## Core Equations
 
 Gate-voltage relation:
