@@ -66,8 +66,9 @@ if verbose
     fprintf('Loading measured data from: %s\n', csvFilePath);
 end
 
-% Read CSV
+% Read CSV with preserved variable names
 opts = detectImportOptions(csvFilePath, 'FileType', 'text');
+opts.VariableNamingRule = 'preserve';
 data = readtable(csvFilePath, opts);
 
 % Get header
@@ -78,12 +79,13 @@ end
 
 % ===== AUTO-DETECT FIRST COLUMN TYPE =====
 firstColName = header{1};
-firstColName_lower = lower(firstColName);
+% Remove parentheses and special chars for matching
+firstColNameClean = regexprep(lower(firstColName), '[()_@]', '');
 
 % Detect what first column represents
-isVgColumn = any(strcmpi(firstColName_lower, {'vg', 'gate', 'v', 'vgate', 'voltageeffective'}));
-isFreqColumn = any(strcmpi(firstColName_lower, {'freq', 'frequency', 'hz', 'omega'}));
-isTempColumn = any(strcmpi(firstColName_lower, {'temp', 'temperature', 'k', 'kelvin'}));
+isVgColumn = any(contains(firstColNameClean, {'vg', 'gate', 'voltage'}));
+isFreqColumn = any(contains(firstColNameClean, {'freq', 'hz', 'omega'}));
+isTempColumn = any(contains(firstColNameClean, {'temp', 'kelvin', 'k'}));
 
 if verbose
     if isVgColumn
@@ -103,14 +105,24 @@ clowIdx = [];
 chighIdx = [];
 
 for i = 1:length(header)
+    % Clean header for matching - keep letters only for easier matching
     colName_lower = lower(header{i});
+    colNameLettersOnly = regexprep(colName_lower, '[^a-z]', '');
     
-    if isempty(clowIdx) && any(strcmpi(colName_lower, {'clow', 'c_low', 'clf', 'clowfreq', 'c@1hz', 'c_lf', 'c_1hz'}))
-        clowIdx = i;
+    if isempty(clowIdx)
+        % Check for "clow" patterns: clow, clowfreq, c1hz, clf, clf, c_low, clow_freq, etc
+        if contains(colNameLettersOnly, 'clow') || ...
+           (contains(colNameLettersOnly, 'c') && contains(colNameLettersOnly, 'hz') && ~contains(colNameLettersOnly, 'high'))
+            clowIdx = i;
+        end
     end
     
-    if isempty(chighIdx) && any(strcmpi(colName_lower, {'chigh', 'c_high', 'chf', 'chighfreq', 'c@1mhz', 'c_hf', 'c_1mhz'}))
-        chighIdx = i;
+    if isempty(chighIdx)
+        % Check for "chigh" patterns: chigh, chighfreq, c1mhz, chf, c_high, chigh_freq, etc
+        if contains(colNameLettersOnly, 'chigh') || ...
+           (contains(colNameLettersOnly, 'c') && contains(colNameLettersOnly, 'mhz'))
+            chighIdx = i;
+        end
     end
 end
 

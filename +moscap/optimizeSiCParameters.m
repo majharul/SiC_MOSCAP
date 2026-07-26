@@ -78,18 +78,25 @@ initParams = moscap.enforceMaterialConsistency(initParams, true);
 % ===== INITIAL SIMULATION =====
 simInit = moscap.simulateMosCapCV(initParams);
 
-% Interpolate measured data to match simulation Vg grid
-CmeasLow = interp1(measData.Vg, measData.Clow, simInit.Vg, 'linear', 'extrap');
+% Store measurement grid for later use
+measVg = measData.Vg;
+measClow = measData.Clow;
 if isfield(measData, 'Chigh') && ~isempty(measData.Chigh)
-    CmeasHigh = interp1(measData.Vg, measData.Chigh, simInit.Vg, 'linear', 'extrap');
+    measChigh = measData.Chigh;
     hasMeasHigh = true;
 else
-    CmeasHigh = [];
+    measChigh = [];
     hasMeasHigh = false;
 end
 
-% Initial RMSE
-rmseInit = computeRMSE(simInit.Clow, CmeasLow, simInit.Chigh, CmeasHigh, wLow, wHigh);
+% Initial RMSE (interpolate simulation to measurement grid)
+CsimLow_init = interp1(simInit.Vg, simInit.Clow, measVg, 'linear', 'extrap');
+if hasMeasHigh
+    CsimHigh_init = interp1(simInit.Vg, simInit.Chigh, measVg, 'linear', 'extrap');
+else
+    CsimHigh_init = [];
+end
+rmseInit = computeRMSE(CsimLow_init, measClow, CsimHigh_init, measChigh, wLow, wHigh);
 if verbose
     fprintf('Initial RMSE: %.2e F (%.4f pF)\n', rmseInit, rmseInit*1e12);
 end
@@ -116,7 +123,7 @@ lb = [0.1,   0.1,   0.1,  0,    0.5];   % Lower bounds
 ub = [100,   10,    100,  1,    1.5];   % Upper bounds
 
 % ===== OBJECTIVE FUNCTION =====
-objFun = @(x) objectiveFunction(x, initParams, measData, CmeasLow, CmeasHigh, wLow, wHigh, hasMeasHigh);
+objFun = @(x) objectiveFunction(x, initParams, measVg, measClow, measChigh, wLow, wHigh, hasMeasHigh);
 
 % ===== OPTIMIZATION OPTIONS =====
 opts = optimoptions('fmincon', ...
@@ -153,17 +160,17 @@ optimParams = moscap.enforceMaterialConsistency(optimParams, false);
 simFinal = moscap.simulateMosCapCV(optimParams);
 
 % Reinterpolate to original measured Vg
-CsimLow = interp1(simFinal.Vg, simFinal.Clow, measData.Vg, 'linear', 'extrap');
+CsimLow = interp1(simFinal.Vg, simFinal.Clow, measVg, 'linear', 'extrap');
 if hasMeasHigh
-    CsimHigh = interp1(simFinal.Vg, simFinal.Chigh, measData.Vg, 'linear', 'extrap');
+    CsimHigh = interp1(simFinal.Vg, simFinal.Chigh, measVg, 'linear', 'extrap');
 else
     CsimHigh = [];
 end
 
-rmseFinal = computeRMSE(simFinal.Clow, CmeasLow, simFinal.Chigh, CmeasHigh, wLow, wHigh);
-rmseLow = computeRMSE(simFinal.Clow, CmeasLow, [], [], 1, 0);
+rmseFinal = computeRMSE(CsimLow, measClow, CsimHigh, measChigh, wLow, wHigh);
+rmseLow = computeRMSE(CsimLow, measClow, [], [], 1, 0);
 if hasMeasHigh
-    rmseHigh = computeRMSE(simFinal.Chigh, CmeasHigh, [], [], 1, 0);
+    rmseHigh = computeRMSE(CsimHigh, measChigh, [], [], 1, 0);
 else
     rmseHigh = NaN;
 end
@@ -197,15 +204,15 @@ fitInfo.rmse_low = rmseLow;
 fitInfo.rmse_high = rmseHigh;
 fitInfo.exitflag = exitflag;
 fitInfo.iterations = output.iterations;
-fitInfo.simulated = struct('Vg', measData.Vg, 'Clow', CsimLow, 'Chigh', CsimHigh);
-fitInfo.measured = measData;
+fitInfo.simulated = struct('Vg', measVg, 'Clow', CsimLow, 'Chigh', CsimHigh);
+fitInfo.measured = struct('Vg', measVg, 'Clow', measClow, 'Chigh', measChigh);
 fitInfo.improvement = (rmseInit - rmseFinal) / rmseInit * 100;
 
 end
 
 % ===== HELPER FUNCTIONS =====
 
-function fval = objectiveFunction(x, baseParams, measData, CmeasLow, CmeasHigh, wLow, wHigh, hasMeasHigh)
+function fval = objectiveFunction(x, baseParams, measVg, measClow, measChigh, wLow, wHigh, hasMeasHigh)
 %OBJECTIVEFUNCTION Weighted RMSE between measured and simulated capacitance.
 
 try
@@ -224,15 +231,15 @@ try
     sim = moscap.simulateMosCapCV(params);
     
     % Interpolate to measurement grid
-    CsimLow = interp1(sim.Vg, sim.Clow, measData.Vg, 'linear', 'extrap');
+    CsimLow = interp1(sim.Vg, sim.Clow, measVg, 'linear', 'extrap');
     if hasMeasHigh
-        CsimHigh = interp1(sim.Vg, sim.Chigh, measData.Vg, 'linear', 'extrap');
+        CsimHigh = interp1(sim.Vg, sim.Chigh, measVg, 'linear', 'extrap');
     else
         CsimHigh = [];
     end
     
     % Compute weighted RMSE
-    fval = computeRMSE(CsimLow, CmeasLow, CsimHigh, CmeasHigh, wLow, wHigh);
+    fval = computeRMSE(CsimLow, measClow, CsimHigh, measChigh, wLow, wHigh);
     
     % Penalize non-physical results (negative or zero capacitance)
     if any(CsimLow <= 0) || any(CsimHigh <= 0)
