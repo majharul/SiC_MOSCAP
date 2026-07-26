@@ -30,7 +30,9 @@ switch lower(ext)
     case '.json'
         % JSON format (human-readable)
         jsonStruct = paramsToJsonStruct(params);
-        jsonStruct.metadata.description = description;
+        % Escape newlines in description for valid JSON
+        descriptionEscaped = strrep(description, sprintf('\n'), ' | ');
+        jsonStruct.metadata.description = descriptionEscaped;
         jsonStruct.metadata.saveDate = datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss');
         
         jsonText = jsonencode(jsonStruct);
