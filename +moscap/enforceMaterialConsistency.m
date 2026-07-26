@@ -54,7 +54,7 @@ switch processName
         params.sigma = 0.14e-6;
         params.xmax = 6e-6;
         params.tau_gen = 1e-3;
-        params.phiF_cap = 0.75;
+        params.phiF_cap = 1.20;  % Allow full Fermi potential physics
         params.invWidth = 1.0;  % Wider transition for smoother curve
         params.forceLowFreqInversion = false;
     case {'pass1-run1', 'w1-w6'}
@@ -64,7 +64,7 @@ switch processName
         params.sigma = 0.18e-6;
         params.xmax = 8e-6;
         params.tau_gen = 2e-3;
-        params.phiF_cap = 0.80;
+        params.phiF_cap = 1.25;  % Allow full Fermi potential physics
         params.invWidth = 1.1;  % Wider transition for smoother curve
         params.forceLowFreqInversion = false;
     case {'pass1-run2', 'w7', 'w9', 'w11'}
@@ -74,7 +74,7 @@ switch processName
         params.sigma = 0.18e-6;
         params.xmax = 8e-6;
         params.tau_gen = 2e-3;
-        params.phiF_cap = 0.82;
+        params.phiF_cap = 1.25;  % Allow full Fermi potential physics
         params.invWidth = 1.2;  % Wider transition for smoother curve
         params.forceLowFreqInversion = false;
     case {'run2-2022', 'w1&2'}
@@ -84,21 +84,22 @@ switch processName
         params.sigma = 0.22e-6;
         params.xmax = 12e-6;
         params.tau_gen = 3e-3;
-        params.phiF_cap = 0.85;
+        params.phiF_cap = 1.20;  % Allow full Fermi potential physics for SiC (was 0.85V)
         params.invWidth = 1.3;  % Wider transition for smoother curve
         params.forceLowFreqInversion = false;
     otherwise
-        params.Na_peak = 8e22;
+        % Default SiC preset (same as RUN2-2022)
+        params.Na_peak = 1e15 * 1e6;
         params.Npoly = 5e24;
-        params.Rp = 0.20e-6;
-        params.sigma = 0.07e-6;
-        params.xmax = 6e-6;
-        params.tau_gen = 2e-3;
-        params.phiF_cap = 0.85;
+        params.Rp = 0.55e-6;
+        params.sigma = 0.22e-6;
+        params.xmax = 12e-6;
+        params.tau_gen = 3e-3;
+        params.phiF_cap = 1.20;  % Allow full Fermi potential physics
         params.invGain = 1.0;
-        params.invWidth = 1.2;  % Wider transition for smoother curve
+        params.invWidth = 1.3;
         params.forceLowFreqInversion = false;
-        params.sicProcess = 'custom';
+        params.sicProcess = 'RUN2-2022';
 end
 end
 

@@ -113,7 +113,7 @@ for i = 1:n
     Cs_i = abs(dQs_i) * Area;
 
     phiF_raw = Vt * log(max(Na_eff, 1.01 * ni) / max(ni, 1e-30));
-    phiF = min(max(phiF_raw, 0.05), params.phiF_cap);
+    phiF = min(max(phiF_raw, 0.01), params.phiF_cap);
     invWidth = 0.12;
     if isfield(params, 'invWidth')
         invWidth = max(params.invWidth, 0.01);
