@@ -23,13 +23,16 @@
 %   -5,410.5,408.3
 %   0,415.0,390.2
 %   5,420.1,150.5
-%   10,420.3,151.2
-
+%   10,420.3,151.2%
+% ⚠️  DATA RANGE CHECK:
+%   Measured capacitance should typically be in range: 50-400 pF
+%   If your values are < 1e-10 pF or other extreme values, 
+%   check data format and units. See DATA_FORMAT_DIAGNOSTIC.md
 clear; close all; clc;
 
 % ========== USER CONFIGURATION ==========
 % Path to measured data CSV
-measuredDataFile = 'measured_sic_cv_data.csv';  % Change to your CSV file
+measuredDataFile = 'example_measured_sic_data.csv';  % Change to your CSV file
 
 % Output parameter files
 paramMatFile = 'optimized_sic_parameters.mat';
@@ -81,7 +84,7 @@ if USE_INITIAL_PARAMETERS_FILE && isfile(INITIAL_PARAMETERS_FILE)
 else
     fprintf('Using default SiC parameters\n');
     initParams = moscap.defaultParameters();
-    initParams.material = '4H-SiC';
+    initParams.material = 'Si';%4H-SiC
     initParams = moscap.enforceMaterialConsistency(initParams, true);
 end
 
