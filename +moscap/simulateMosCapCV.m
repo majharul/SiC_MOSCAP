@@ -72,8 +72,9 @@ for i = 1:n
     for iter = 1:120
         [Qs_i, dQs_i] = moscap.qsurfaceAndDerivative(psi_i, Na_eff, ni, eps_si, Vt, q);
 
-        VG_eff = Vfb + (VG - Vfb) / max(params.stretch, 1);
-        f = Vfb + psi_i - Qs_i / Cox_area - VG_eff;
+        % Pure Poisson-Boltzmann: psi_s + Qs/Cox = VG - Vfb
+        % Rearranged for Newton-Raphson: Vfb + psi_s - Qs/Cox - VG = 0
+        f = Vfb + psi_i - Qs_i / Cox_area - VG;
         df = 1 - dQs_i / Cox_area;
 
         if abs(df) < 1e-18
@@ -86,7 +87,7 @@ for i = 1:n
         psi_new = psi_trial;
         for ls = 1:8
             [Qs_new, ~] = moscap.qsurfaceAndDerivative(psi_new, Na_eff, ni, eps_si, Vt, q);
-            f_new = Vfb + psi_new - Qs_new / Cox_area - VG_eff;
+            f_new = Vfb + psi_new - Qs_new / Cox_area - VG;
             if abs(f_new) <= abs(f)
                 break;
             end
@@ -195,15 +196,9 @@ if params.smoothWindow > 1
     CmeasHigh = movmean(CmeasHigh, w, 'Endpoints', 'shrink');
 end
 
-% For 4H-SiC with slow tau_gen, apply additional smoothing to reduce discontinuities
-% from sharp inversion weight transitions in deep depletion region
-if strcmpi(strtrim(params.material), '4H-SiC') && params.tau_gen > 1e-4
-    % Apply a second pass of smoothing with increased window to eliminate oscillations
-    % larger window = more aggressive smoothing for cleaner curves
-    w2 = max(11, round(0.8 * params.smoothWindow));
-    Clow = movmean(Clow, w2, 'Endpoints', 'shrink');
-    Chigh = movmean(Chigh, w2, 'Endpoints', 'shrink');
-end
+% Note: Removed extra aggressive SiC smoothing pass
+% Pure physics model should not require double-smoothing; if oscillations remain,
+% they indicate numerical issues in the surface potential solver, not harmonic artifacts.
 
 % Ensure all output is real and finite
 Clow = real(Clow);

@@ -23,11 +23,11 @@ end
 
 dF = (-exp_neg + 1 + (ni / Na) ^ 2 * (exp_pos - 1)) / Vt;
 
-psiScale = max(1e-5, 2.4 * Vt);
-sgn = tanh(psi / psiScale);
-sgn = real(sgn);
-if ~isfinite(sgn)
-    sgn = sign(psi);
+% Use hard sign function (psi > 0 → Qs negative; psi < 0 → Qs positive)
+% Smooth tanh sign was creating nonphysical W-shaped curve artifacts
+sgn = sign(psi);
+if sgn == 0
+    sgn = 1;  % Default to positive for psi=0 (flatband)
 end
 
 VtF = Vt * F;
@@ -65,11 +65,14 @@ if ~isfinite(F)
     F = 1e-30;
 end
 
-psiScale = max(1e-6, 0.4 * Vt);
-sgn = tanh(psi / psiScale);
+psiScale = max(1e-6, 1 * Vt);
+sgn = sign(psi);  % Hard sign function for correct physics
+if sgn == 0
+    sgn = 1;  % Default to positive for psi=0
+end
 sgn = real(sgn);
 if ~isfinite(sgn)
-    sgn = sign(psi);
+    sgn = 1;
 end
 
 VtF = Vt * F;

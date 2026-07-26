@@ -25,7 +25,10 @@ params.sigma = 0.08e-6;              % m
 params.xmax = 3e-6;                  % m
 
 % Work function / fixed oxide charge
-params.phi_ms = -3.15;               % V
+% Work function difference (metal - semiconductor)
+% Realistic values: typically -1 to +2 V depending on gate material and semiconductor
+% Al on Si: -1.1 V; Poly on SiC p-type: +0.8 V
+params.phi_ms = -1.1;               % V (default: Al on Si)
 params.Qox_m2 = 8e3;                   % m^-2 equivalent fixed charge density
 
 % Interface trap dynamics
@@ -36,7 +39,7 @@ params.tau_it = 100e-6;              % s
 params.Cbt_cm2eV = 2e11;             % border traps (cm^-2 eV^-1)
 params.tau_bt = 5e-11;                % border trap response time (s)
 params.Cpar_pF = 0;                  % overlap/fringe parasitic capacitance (pF)
-params.stretch = 1.0;                % C-V stretch-out factor (>=1)
+params.stretch = 1.0;                % DEPRECATED: Non-physical voltage scaling (kept for backward compatibility, not used in physics)
 
 % Poly depletion
 params.Npoly = 1e25;                 % m^-3
@@ -45,13 +48,13 @@ params.psi_poly = 3.6;               % V
 % Electrical conditions
 params.lfFreqHz = 1;                % Hz, quasi-static/low-frequency response
 params.hfFreqHz = 1e6;              % Hz, high-frequency response
-params.Rs = 500;                    % ohm
+params.Rs = 0;                      % ohm (pure physics; set >0 only for measurement parasitic effects)
 
 % Sweep
 params.Vg = linspace(-10, 15, 1001);
 
-% Numerical smoothing for occasional point-to-point artifacts.
-params.smoothWindow = 10;
+% Numerical smoothing: minimal for pure physics (only removes numerical noise)
+params.smoothWindow = 3;  % Small window for numerical stability, not physics masking
 
 % Inversion response calibration via carrier generation/recombination time.
 params.tau_gen = 9e-6;              % s (Si: 5-10 us for fast inversion; SiC: 1-3 ms for slow)

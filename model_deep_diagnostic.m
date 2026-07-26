@@ -46,7 +46,8 @@ for Vg_val = Vg_test
     % Newton solver for surface potential
     psi_trial = 0;
     Vfb = params.phi_ms - params.Qox_m2 / Cox_area;
-    VG_eff = Vfb + (Vg_val - Vfb) / max(params.stretch, 1);
+    % Pure physics: Poisson-Boltzmann without artificial stretching
+    VG_eff = Vg_val;  % No stretching - direct physics
     
     for iter = 1:50
         [Qs, dQs] = moscap.qsurfaceAndDerivative(psi_trial, Na_eff, ni, eps_si, Vt, q);
