@@ -9,8 +9,9 @@ if resetDoping
     switch lower(strtrim(params.material))
         case {'4h-sic', 'sic'}
             params = applySiCProcessPreset(params);
-            % SiC has sharp inversion weight transitions in deep depletion; use stronger smoothing
-            params.smoothWindow = max(params.smoothWindow, 15);
+            % Note: SiC has lower doping and longer tau_gen, but pure physics should handle it
+            % Don't force excessive smoothing - let physics show through with minimal smoothing
+            % params.smoothWindow is already set to 3 in defaultParameters (minimal noise filter)
         otherwise % Si
             params.Na_peak = 5e23;
             params.Npoly = 1e25;
@@ -22,7 +23,6 @@ if resetDoping
             params.invWidth = 0.12;
             params.forceLowFreqInversion = false;
             params.sicProcess = 'none';
-            % Si has smoother transitions; default smoothing (10) is sufficient
     end
 end
 
