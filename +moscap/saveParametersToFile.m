@@ -37,7 +37,7 @@ switch lower(ext)
         
         jsonText = jsonencode(jsonStruct);
         fid = fopen(filePath, 'w');
-        fprintf(fid, jsonText);
+        fwrite(fid, jsonText);
         fclose(fid);
         fprintf('✓ Saved parameters to: %s (JSON)\n', filePath);
         
