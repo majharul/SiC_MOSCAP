@@ -55,7 +55,7 @@ switch processName
         params.xmax = 6e-6;
         params.tau_gen = 1e-3;
         params.phiF_cap = 0.75;
-        params.invWidth = 0.50;  % Increased for smooth inversion transition
+        params.invWidth = 1.0;  % Wider transition for smoother curve
         params.forceLowFreqInversion = false;
     case {'pass1-run1', 'w1-w6'}
         params.Na_peak = 5e14 * 1e6;
@@ -65,7 +65,7 @@ switch processName
         params.xmax = 8e-6;
         params.tau_gen = 2e-3;
         params.phiF_cap = 0.80;
-        params.invWidth = 0.55;  % Increased for smooth inversion transition
+        params.invWidth = 1.1;  % Wider transition for smoother curve
         params.forceLowFreqInversion = false;
     case {'pass1-run2', 'w7', 'w9', 'w11'}
         params.Na_peak = 5e14 * 1e6;
@@ -75,7 +75,7 @@ switch processName
         params.xmax = 8e-6;
         params.tau_gen = 2e-3;
         params.phiF_cap = 0.82;
-        params.invWidth = 0.52;  % Increased for smooth inversion transition
+        params.invWidth = 1.2;  % Wider transition for smoother curve
         params.forceLowFreqInversion = false;
     case {'run2-2022', 'w1&2'}
         params.Na_peak = 1e15 * 1e6;
@@ -85,7 +85,7 @@ switch processName
         params.xmax = 12e-6;
         params.tau_gen = 3e-3;
         params.phiF_cap = 0.85;
-        params.invWidth = 0.60;  % Increased for smooth inversion transition
+        params.invWidth = 1.3;  % Wider transition for smoother curve
         params.forceLowFreqInversion = false;
     otherwise
         params.Na_peak = 8e22;
@@ -96,7 +96,7 @@ switch processName
         params.tau_gen = 2e-3;
         params.phiF_cap = 0.85;
         params.invGain = 1.0;
-        params.invWidth = 0.55;  % Increased for smooth inversion transition
+        params.invWidth = 1.2;  % Wider transition for smoother curve
         params.forceLowFreqInversion = false;
         params.sicProcess = 'custom';
 end

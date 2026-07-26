@@ -124,8 +124,11 @@ for i = 1:n
     invWeight = 0.5 * (1 + tanh((psi_i - 2 * phiF) / invWidth));
 
     tauEff = max(params.tau_gen, 1e-12);
-    genLow = 1;
+    % FIXED: genLow should ALSO depend on frequency, not always be 1!
+    % This allows low-frequency inversion response to be frequency-dependent
+    genLow = 1 / (1 + (omegaLow * tauEff)^2);
     genHigh = 1 / (1 + (omegaHigh * tauEff)^2);
+    
     trapLow = 1 / (1 + (omegaLow * max(params.tau_it, 1e-12))^2);
     trapHigh = 1 / (1 + (omegaHigh * max(params.tau_it, 1e-12))^2);
     btrapLow = 1 / (1 + (omegaLow * max(params.tau_bt, 1e-12))^2);
@@ -195,9 +198,11 @@ end
 % For 4H-SiC with slow tau_gen, apply additional smoothing to reduce discontinuities
 % from sharp inversion weight transitions in deep depletion region
 if strcmpi(strtrim(params.material), '4H-SiC') && params.tau_gen > 1e-4
-    % Apply a second pass of smoothing to blend the inversion transition
-    w2 = max(5, round(0.5 * params.smoothWindow));
+    % Apply a second pass of smoothing with increased window to eliminate oscillations
+    % larger window = more aggressive smoothing for cleaner curves
+    w2 = max(11, round(0.8 * params.smoothWindow));
     Clow = movmean(Clow, w2, 'Endpoints', 'shrink');
+    Chigh = movmean(Chigh, w2, 'Endpoints', 'shrink');
 end
 
 % Ensure all output is real and finite
