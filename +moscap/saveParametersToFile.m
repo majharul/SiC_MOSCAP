@@ -55,7 +55,8 @@ jsonStruct.metadata = struct();
 jsonStruct.geometry = struct();
 jsonStruct.geometry.W = params.W;
 jsonStruct.geometry.L = params.L;
-jsonStruct.geometry.xox = params.xox;
+jsonStruct.geometry.tox = params.tox;
+jsonStruct.geometry.NF = params.NF;
 
 % Material
 jsonStruct.material = struct();
@@ -68,16 +69,18 @@ jsonStruct.material.xmax = params.xmax;
 
 % Electrostatics
 jsonStruct.electrostatics = struct();
-jsonStruct.electrostatics.Vfb = params.Vfb;
+jsonStruct.electrostatics.phi_ms = params.phi_ms;
 jsonStruct.electrostatics.Qox_m2 = params.Qox_m2;
-jsonStruct.electrostatics.Cpar = params.Cpar;
+jsonStruct.electrostatics.Cpar_pF = params.Cpar_pF;
 jsonStruct.electrostatics.Rs = params.Rs;
 jsonStruct.electrostatics.stretch = params.stretch;
 
 % Non-ideal effects
 jsonStruct.nonIdeal = struct();
 jsonStruct.nonIdeal.Dit_cm2eV = params.Dit_cm2eV;
-jsonStruct.nonIdeal.Cbt = params.Cbt;
+jsonStruct.nonIdeal.Cbt_cm2eV = params.Cbt_cm2eV;
+jsonStruct.nonIdeal.tau_bt = params.tau_bt;
+jsonStruct.nonIdeal.tau_it = params.tau_it;
 jsonStruct.nonIdeal.tau_gen = params.tau_gen;
 jsonStruct.nonIdeal.forceLowFreqInversion = params.forceLowFreqInversion;
 
