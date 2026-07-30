@@ -8,20 +8,20 @@ if ~isfinite(gamma) || gamma <= 0
     gamma = 1e-30;
 end
 
-eta = max(min(psi / Vt, 80), -80);
+eta = max(min(psi / Vt, 200), -200);
 exp_pos = exp(eta);
 exp_neg = exp(-eta);
 
 ni_ratio_sq = (ni / Na) ^ 2;
-ni_ratio_sq = max(min(ni_ratio_sq, 1), 1e-30);
+ni_ratio_sq = max(min(ni_ratio_sq, 1), 0);
 
 F = exp_neg + eta - 1 + ni_ratio_sq * (exp_pos - eta - 1);
-F = max(F, 1e-30);
+F = max(F, 1e-300);
 if ~isfinite(F)
-    F = 1e-30;
+    F = 1e-300;
 end
 
-dF = (-exp_neg + 1 + (ni / Na) ^ 2 * (exp_pos - 1)) / Vt;
+dF = (-exp_neg + 1 + ni_ratio_sq * (exp_pos - 1)) / Vt;
 
 % Use hard sign function (psi > 0 → Qs negative; psi < 0 → Qs positive)
 % Smooth tanh sign was creating nonphysical W-shaped curve artifacts
@@ -52,17 +52,17 @@ if ~isfinite(gamma) || gamma <= 0
     gamma = 1e-30;
 end
 
-eta = max(min(psi / Vt, 80), -80);
+eta = max(min(psi / Vt, 200), -200);
 exp_pos = exp(eta);
 exp_neg = exp(-eta);
 
 ni_ratio_sq = (ni / Na) ^ 2;
-ni_ratio_sq = max(min(ni_ratio_sq, 1), 1e-30);
+ni_ratio_sq = max(min(ni_ratio_sq, 1), 0);
 
 F = exp_neg + eta - 1 + ni_ratio_sq * (exp_pos - eta - 1);
-F = max(F, 1e-30);
+F = max(F, 1e-300);
 if ~isfinite(F)
-    F = 1e-30;
+    F = 1e-300;
 end
 
 psiScale = max(1e-6, 1 * Vt);

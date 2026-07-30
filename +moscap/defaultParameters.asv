@@ -24,7 +24,7 @@ params.sigma = 0.08e-6;              % m
 params.xmax = 5e-6;                  % m
 
 % Work function / fixed oxide charge
-params.phi_ms = -3.15;               % V
+params.phi_ms = +3.15;               % V
 params.Qox_m2 = 2e3;                   % m^-2 equivalent fixed charge density
 
 % Interface trap dynamics

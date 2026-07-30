@@ -69,6 +69,7 @@ legend;
 ylim([0 500]);
 
 sgtitle('Si vs SiC C-V Comparison with Material Enforcement');
+saveas(gcf, 'compare_materials_after_fix.png');
 
 fprintf('ANALYSIS:\n');
 fprintf('Si shows: smooth variation from accumulation to inversion\n');

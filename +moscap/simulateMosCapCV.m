@@ -109,62 +109,51 @@ for i = 1:n
         newtonIters(i) = 120;
     end
 
-    [~, dQs_i] = moscap.qsurfaceAndDerivative(psi_i, Na_eff, ni, eps_si, Vt, q);
-    Cs_i = abs(dQs_i) * Area;
+    psi(i) = psi_i;
 
-    phiF_raw = Vt * log(max(Na_eff, 1.01 * ni) / max(ni, 1e-30));
-    phiF = min(max(phiF_raw, 0.01), params.phiF_cap);
-    invWidth = 0.12;
-    if isfield(params, 'invWidth')
-        invWidth = max(params.invWidth, 0.01);
-    end
-    
-    % Smooth inversion weight transition using tanh (gradual S-curve)
-    % The tanh naturally creates a smooth step from 0 to 1 around psi_i = 2*phiF
-    % Use (psi_i - 2*phiF) / invWidth where larger invWidth = smoother transition
-    invWeight = 0.5 * (1 + tanh((psi_i - 2 * phiF) / invWidth));
+    % --- Semiconductor capacitance directly from the surface potential ---
+    % Two physical limits (Nicollian-Brews), no thresholds or inversion weights:
+    %   CsLF : minority carriers follow the AC signal (quasi-static)
+    %   CsHF : inversion charge frozen -> saturates at Cmin in strong inversion
+    [CsLF_area, CsHF_area] = moscap.surfaceCapacitances(psi_i, Na_eff, ni, eps_si, Vt, q);
+    Cs(i) = CsLF_area * Area;
 
+    % Minority-carrier ability to follow the AC signal, set by generation time.
+    % genLow/genHigh interpolate between the frozen (HF) and full (LF) limits;
+    % long tau_gen (e.g. SiC) suppresses inversion response even at low frequency.
     tauEff = max(params.tau_gen, 1e-12);
-    % FIXED: genLow should ALSO depend on frequency, not always be 1!
-    % This allows low-frequency inversion response to be frequency-dependent
-    genLow = 1 / (1 + (omegaLow * tauEff)^2);
-    genHigh = 1 / (1 + (omegaHigh * tauEff)^2);
-    
-    trapLow = 1 / (1 + (omegaLow * max(params.tau_it, 1e-12))^2);
-    trapHigh = 1 / (1 + (omegaHigh * max(params.tau_it, 1e-12))^2);
-    btrapLow = 1 / (1 + (omegaLow * max(params.tau_bt, 1e-12))^2);
-    btrapHigh = 1 / (1 + (omegaHigh * max(params.tau_bt, 1e-12))^2);
+    genLow = 1 / (1 + (omegaLow * tauEff) ^ 2);
+    genHigh = 1 / (1 + (omegaHigh * tauEff) ^ 2);
+
+    CsLowArea = CsHF_area + genLow * (CsLF_area - CsHF_area);
+    CsHighArea = CsHF_area + genHigh * (CsLF_area - CsHF_area);
+    CsLow = CsLowArea * Area;
+    CsHigh = CsHighArea * Area;
+
+    % Interface / border trap capacitances (in parallel with the semiconductor).
+    trapLow = 1 / (1 + (omegaLow * max(params.tau_it, 1e-12)) ^ 2);
+    trapHigh = 1 / (1 + (omegaHigh * max(params.tau_it, 1e-12)) ^ 2);
+    btrapLow = 1 / (1 + (omegaLow * max(params.tau_bt, 1e-12)) ^ 2);
+    btrapHigh = 1 / (1 + (omegaHigh * max(params.tau_bt, 1e-12)) ^ 2);
 
     CitLow = (Cit0_area * trapLow) * Area;
     CitHigh = (Cit0_area * trapHigh) * Area;
     CbtLow = (Cbt0_area * btrapLow) * Area;
     CbtHigh = (Cbt0_area * btrapHigh) * Area;
 
-    psi(i) = psi_i;
-    Cs(i) = Cs_i;
+    % Series combination Cox_eff -- (Cs + Cit + Cbt). The series network is
+    % inherently bounded by Cox_eff, so no capping/clamping trigger is needed.
+    CsemLow = CsLow + CitLow + CbtLow;
+    CsemHigh = CsHigh + CitHigh + CbtHigh;
 
-    CbaseLow = (Cox_eff * (Cs_i + CitLow + CbtLow)) / (Cox_eff + Cs_i + CitLow + CbtLow) + Cpar;
-    CbaseHigh = (Cox_eff * (Cs_i + CitHigh + CbtHigh)) / (Cox_eff + Cs_i + CitHigh + CbtHigh) + Cpar;
+    Clow(i) = (Cox_eff * CsemLow) / (Cox_eff + CsemLow) + Cpar;
+    Chigh(i) = (Cox_eff * CsemHigh) / (Cox_eff + CsemHigh) + Cpar;
 
-    Cinv_qsLow = max(Cox_eff + Cpar - CbaseLow, 0);
-    Cinv_qsHigh = max(Cox_eff + Cpar - CbaseHigh, 0);
-
-    if isfield(params, 'forceLowFreqInversion') && params.forceLowFreqInversion
-        genLow = 1;
-        genHigh = 1;
-    end
-
-    CinvAddLow = invWeight * max(min(params.invGain, 1), 0) * genLow * Cinv_qsLow;
-    CinvAddHigh = invWeight * max(min(params.invGain, 1), 0) * genHigh * Cinv_qsHigh;
-
-    Clow(i) = real(min(CbaseLow + CinvAddLow, Cox_eff + Cpar));
-    Chigh(i) = real(min(CbaseHigh + CinvAddHigh, Cox_eff + Cpar));
-    
     if ~isfinite(Clow(i))
-        Clow(i) = max(0, CbaseLow);
+        Clow(i) = 0;
     end
     if ~isfinite(Chigh(i))
-        Chigh(i) = max(0, CbaseHigh);
+        Chigh(i) = 0;
     end
     if Clow(i) < 0
         Clow(i) = 0;

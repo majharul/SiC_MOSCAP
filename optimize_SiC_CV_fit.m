@@ -32,7 +32,7 @@ clear; close all; clc;
 
 % ========== USER CONFIGURATION ==========
 % Path to measured data CSV
-measuredDataFile = 'example_measured_sic_data.csv';  % Change to your CSV file
+measuredDataFile = 'example_sic_cv_realistic.csv';  % Change to your CSV file
 
 % Output parameter files
 paramMatFile = 'optimized_sic_parameters.mat';
@@ -84,7 +84,7 @@ if USE_INITIAL_PARAMETERS_FILE && isfile(INITIAL_PARAMETERS_FILE)
 else
     fprintf('Using default SiC parameters\n');
     initParams = moscap.defaultParameters();
-    initParams.material = 'Si';%4H-SiC
+    initParams.material = 'si';%4H-SiC
     initParams = moscap.enforceMaterialConsistency(initParams, true);
 end
 
