@@ -16,6 +16,10 @@ A modular MATLAB framework for simulating MOS capacitor C-V characteristics with
 
 ## Preview of the MOSCAP Visualizer
 
+![Fitted model vs measured data](images/fitted_model_meared_data_moscap_100k_1M.svg)
+
+![Surface Potential solver](images\Surface_potential_solver_.svg)
+
 ![MOSCAP_behavior](docs/MOSCAP_CV_behavior_with_non_ideal_scnerio.gif)
 
 ![MOSCAP_behavior_2](docs/Video_preview_moscap_visualizer_with_non_ideal.mp4)
