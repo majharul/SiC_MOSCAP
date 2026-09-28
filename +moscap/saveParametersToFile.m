@@ -64,6 +64,9 @@ jsonStruct.geometry.NF = params.NF;
 jsonStruct.material = struct();
 jsonStruct.material.name = params.material;
 jsonStruct.material.Na_peak = params.Na_peak;
+if isfield(params, 'Na_eff_override') && ~isempty(params.Na_eff_override)
+    jsonStruct.material.Na_eff_override = params.Na_eff_override;
+end
 jsonStruct.material.Npoly = params.Npoly;
 jsonStruct.material.Rp = params.Rp;
 jsonStruct.material.sigma = params.sigma;

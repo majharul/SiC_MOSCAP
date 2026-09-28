@@ -21,7 +21,7 @@ function measData = loadMeasuredDataTemplate(csvFilePath, varargin)
 %   csvFilePath - Path to CSV file
 %   
 %   Name-Value Options:
-%       'Unit'       - 'F', 'pF', 'nF' (default: 'pF')
+%       'Unit'       - 'F', 'pF', 'nF', 'C/Cox', or 'C/Cmax' (default: 'pF')
 %       'SkipRows'   - Rows to skip after header (default: 0)
 %       'VgColumn'   - Column name or index for gate voltage (default: auto-detect)
 %       'ClowColumn' - Column name for low-freq capacitance (default: auto-detect)
@@ -126,12 +126,16 @@ for i = 1:length(header)
     end
 end
 
-if isempty(clowIdx)
-    error('Could not find low-frequency capacitance column. Check CSV headers.');
+if isempty(clowIdx) && isempty(chighIdx)
+    error('Could not find a low- or high-frequency capacitance column. Check CSV headers.');
 end
 
 if verbose
-    fprintf('→ Clow column: %s (index %d)\n', header{clowIdx}, clowIdx);
+    if ~isempty(clowIdx)
+        fprintf('→ Clow column: %s (index %d)\n', header{clowIdx}, clowIdx);
+    else
+        fprintf('→ Clow column: Not found\n');
+    end
     if ~isempty(chighIdx)
         fprintf('→ Chigh column: %s (index %d)\n', header{chighIdx}, chighIdx);
     else
@@ -142,6 +146,7 @@ end
 % ===== EXTRACT DATA =====
 % Convert units to Farads
 unitScale = 1;
+isNormalized = false;
 switch lower(unit)
     case 'pf'
         unitScale = 1e-12;
@@ -149,6 +154,9 @@ switch lower(unit)
         unitScale = 1e-9;
     case 'f'
         unitScale = 1;
+    case {'c/cox', 'c/cmax', 'normalized', 'dimensionless'}
+        unitScale = 1;
+        isNormalized = true;
     otherwise
         warning('Unknown unit %s, assuming pF', unit);
         unitScale = 1e-12;
@@ -157,9 +165,13 @@ end
 % Extract first column
 firstColData = data.(header{1});
 
-% Extract capacitance columns
-ClowRaw = data.(header{clowIdx});
-Clow = double(ClowRaw) * unitScale;
+% Extract capacitance columns. High-frequency-only CSV files are valid.
+if ~isempty(clowIdx)
+    ClowRaw = data.(header{clowIdx});
+    Clow = double(ClowRaw) * unitScale;
+else
+    Clow = [];
+end
 
 if ~isempty(chighIdx)
     ChighRaw = data.(header{chighIdx});
@@ -172,6 +184,8 @@ end
 measData = struct();
 measData.header = header;
 measData.source = csvFilePath;
+measData.unit = unit;
+measData.isNormalized = isNormalized;
 
 if isVgColumn
     measData.Vg = double(firstColData);
@@ -210,10 +224,18 @@ else
 end
 
 if verbose
-    fprintf('Data loaded: %d points\n', length(measData.Clow));
-    fprintf('Clow range: %.2f - %.2f pF\n', min(measData.Clow)*1e12, max(measData.Clow)*1e12);
+    fprintf('Data loaded: %d points\n', length(firstColData));
+    if isNormalized && ~isempty(measData.Clow)
+        fprintf('Clow range: %.4f - %.4f normalized\n', min(measData.Clow), max(measData.Clow));
+    elseif ~isempty(measData.Clow)
+        fprintf('Clow range: %.2f - %.2f pF\n', min(measData.Clow)*1e12, max(measData.Clow)*1e12);
+    end
     if ~isempty(measData.Chigh)
-        fprintf('Chigh range: %.2f - %.2f pF\n', min(measData.Chigh)*1e12, max(measData.Chigh)*1e12);
+        if isNormalized
+            fprintf('Chigh range: %.4f - %.4f normalized\n', min(measData.Chigh), max(measData.Chigh));
+        else
+            fprintf('Chigh range: %.2f - %.2f pF\n', min(measData.Chigh)*1e12, max(measData.Chigh)*1e12);
+        end
     end
 end
 

@@ -40,7 +40,23 @@ if ~isfinite(denom) || denom <= 0
 end
 
 CsLF = gamma * abs(dFmaj + dFmin) / denom;   % full quasi-static response
-CsHF = gamma * abs(dFmaj)          / denom;   % inversion charge frozen -> Cmin
+
+% Conventional high-frequency C-V freezes the incremental minority charge
+% and limits the depletion width at strong inversion. Dividing dFmaj by
+% the full F (including equilibrium inversion charge) incorrectly drives
+% CsHF toward zero. Evaluate the majority-carrier derivative and hold it
+% at psi_s = 2*phiF, which gives the physical Cmin plateau.
+phiF = Vt * log(max(Na / max(ni, realmin), 1));
+psiInv = max(2 * phiF, 10 * eps(Vt));
+psiHF = min(psi, psiInv);
+uHF = max(min(psiHF / Vt, 200), -200);
+FmajHF = max(exp(-uHF) + uHF - 1, 0);
+dFmajHF = 1 - exp(-uHF);
+if FmajHF < 1e-16
+    CsHF = gamma / sqrt(2 * Vt);  % flat-band Debye-capacitance limit
+else
+    CsHF = gamma * abs(dFmajHF) / (2 * sqrt(Vt * FmajHF));
+end
 
 if ~isfinite(CsLF)
     CsLF = 0;

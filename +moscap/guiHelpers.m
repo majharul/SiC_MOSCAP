@@ -92,10 +92,17 @@ classdef guiHelpers
             [naMin, naMax] = moscap.materialNaBounds(params.material);
             isSiC = strcmpi(strtrim(params.material), '4H-SiC');
             if isSiC
-                naRef = max(params.Na_peak / 1e22, 0.1);
+                if isfield(params, 'Na_eff_override') && ~isempty(params.Na_eff_override)
+                    naValue = params.Na_eff_override;
+                    naLabel = 'Na_eff [x1e22 m^-3]';
+                else
+                    naValue = params.Na_peak;
+                    naLabel = 'Na_peak [x1e22 m^-3]';
+                end
+                naRef = max(naValue / 1e22, 0.1);
                 naHardMin = max(naMin / 1e22, 0.01);
                 naHardMax = naMax / 1e22;
-                spec.NaPeak = moscap.guiHelpers.makePositiveSpec('Na_peak [x1e22 m^-3]', naRef, naRef, naHardMin, naHardMax, '%.3f');
+                spec.NaPeak = moscap.guiHelpers.makePositiveSpec(naLabel, naRef, naRef, naHardMin, naHardMax, '%.3f');
                 spec.NaPeak.step = max(0.01, naRef * 0.1);
             else
                 spec.NaPeak = moscap.guiHelpers.makePositiveSpec('Na_peak [x1e22 m^-3]', params.Na_peak / 1e22, ...
@@ -103,7 +110,11 @@ classdef guiHelpers
                 spec.NaPeak.step = 0.1;
             end
 
-            spec.phiMs = moscap.guiHelpers.makeSignedSpec('phi_ms [V]', params.phi_ms, 0.2, -2, 2, '%.2f');
+            if isSiC
+                spec.phiMs = moscap.guiHelpers.makeSignedSpec('phi_ms [V]', params.phi_ms, 0.2, -20, 20, '%.3f');
+            else
+                spec.phiMs = moscap.guiHelpers.makeSignedSpec('phi_ms [V]', params.phi_ms, 0.2, -2, 2, '%.2f');
+            end
             spec.phiMs.step = 0.01;
             if isSiC
                 spec.Qox = moscap.guiHelpers.makeSignedSpec('Qox [x1e11 m^-2]', params.Qox_m2 / 1e11, 10.0, -200, 200, '%.2f');
@@ -123,20 +134,18 @@ classdef guiHelpers
             spec.tauBt.step = 0.05;
             spec.Cpar = moscap.guiHelpers.makePositiveSpec('Cpar [pF]', params.Cpar_pF, 2, 0, 5e4, '%.2f');
             spec.Cpar.step = 0.5;
-            spec.stretch = moscap.guiHelpers.makePositiveSpec('Stretch factor [-]', params.stretch, 1.1, 1, 5, '%.2f');
-            spec.stretch.step = 0.01;
             spec.Rs = moscap.guiHelpers.makePositiveSpec('Rs [ohm]', params.Rs, 3e3, 0, 1e6, '%.0f');
             spec.Rs.step = 10;
-            spec.freq = moscap.guiHelpers.makePositiveSpec('freq [MHz]', max(params.hfFreqHz, 1) / 1e6, max(params.hfFreqHz, 1) / 1e6, 0.001, 1e4, '%.3g');
-            spec.freq.step = max(spec.freq.value * 0.1, 0.001);
+            spec.lfFreq = moscap.guiHelpers.makePositiveSpec('f_{low} [kHz]', ...
+                max(params.lfFreqHz, 1) / 1e3, 100, 0.001, 1e6, '%.3g');
+            spec.lfFreq.step = max(spec.lfFreq.value * 0.1, 0.001);
+            spec.hfFreq = moscap.guiHelpers.makePositiveSpec('f_{high} [MHz]', ...
+                max(params.hfFreqHz, 1) / 1e6, 1, 0.001, 1e4, '%.3g');
+            spec.hfFreq.step = max(spec.hfFreq.value * 0.1, 0.001);
             spec.smooth = moscap.guiHelpers.makePositiveSpec('Smooth pts [-]', params.smoothWindow, 5, 1, 41, '%.0f');
             spec.smooth.step = 1;
             spec.tauGen = moscap.guiHelpers.makePositiveSpec('tau_gen [us]', params.tau_gen * 1e6, 5, 0.01, 1e6, '%.3g');
             spec.tauGen.step = 0.1;
-            spec.invGain = moscap.guiHelpers.makePositiveSpec('invGain [0-1]', max(min(params.invGain, 1), 0), 0.5, 0, 1, '%.2f');
-            spec.invGain.step = 0.05;
-            spec.invWidth = moscap.guiHelpers.makePositiveSpec('invWidth [V]', max(params.invWidth, 0.01), 0.2, 0.01, 1, '%.2f');
-            spec.invWidth.step = 0.01;
         end
 
         function applySliderStep(sliderObj, minV, maxV, stepV)

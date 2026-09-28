@@ -1,6 +1,11 @@
-function launchMosCapGui(params)
+function launchMosCapGui(params, measured)
 %LAUNCHMOSCAPGUI Interactive C-V explorer GUI with real-time simulation.
 %   Creates collapsible parameter panels, real-time plotting, measured data comparison.
+
+if nargin < 2
+    measured = [];
+end
+params = applyMeasurementContext(params, measured);
 
 fig = uifigure('Name', 'MOSCAP C-V Explorer', 'Color', 'w', 'Position', [80 40 1200 800]);
 
@@ -9,14 +14,15 @@ mainGrid = uigridlayout(fig, [3, 1]);
 mainGrid.RowHeight = {40, '1x', 30};
 
 % ===== TOP BAR =====
-topGrid = uigridlayout(mainGrid, [1, 7]);
+topGrid = uigridlayout(mainGrid, [1, 8]);
 topGrid.Layout.Row = 1;
-topGrid.ColumnWidth = {180, 100, 100, 60, 100, 60, '1x'};
+topGrid.ColumnWidth = {130, 170, 100, 100, 60, 100, 60, '1x'};
 topGrid.Padding = [0 5 0 5];
 
-btnLoad = uibutton(topGrid, 'Text', 'Load Measured CSV/TXT', 'ButtonPushedFcn', @onLoadMeasured);
-btnSiPreset = uibutton(topGrid, 'Text', 'Apply Si Preset', 'ButtonPushedFcn', @(~,~)applyPreset('Si'));
-btnSiCPreset = uibutton(topGrid, 'Text', 'Apply SiC Preset', 'ButtonPushedFcn', @(~,~)applyPreset('4H-SiC'));
+uibutton(topGrid, 'Text', 'Load Fitted Params', 'ButtonPushedFcn', @onLoadParameters);
+uibutton(topGrid, 'Text', 'Load Measured CSV/TXT', 'ButtonPushedFcn', @onLoadMeasured);
+uibutton(topGrid, 'Text', 'Apply Si Preset', 'ButtonPushedFcn', @(~,~)applyPreset('Si'));
+uibutton(topGrid, 'Text', 'Apply SiC Preset', 'ButtonPushedFcn', @(~,~)applyPreset('4H-SiC'));
 
 lblMaterial = uilabel(topGrid, 'Text', 'Material', 'FontWeight', 'bold');
 lblMaterial.HorizontalAlignment = 'right';
@@ -78,8 +84,8 @@ headerNonIdeal.Layout.Row = 5;
 
 panelNonIdeal = uipanel(panelGrid, 'Title', '');
 panelNonIdeal.Layout.Row = 6;
-nonIdealGrid = uigridlayout(panelNonIdeal, [12, 3]);
-nonIdealGrid.RowHeight = repmat({25}, 1, 12);
+nonIdealGrid = uigridlayout(panelNonIdeal, [10, 3]);
+nonIdealGrid.RowHeight = repmat({25}, 1, 10);
 nonIdealGrid.ColumnWidth = {140, '1x', 90};
 nonIdealGrid.Padding = [2 2 2 2];
 nonIdealGrid.RowSpacing = 4;
@@ -90,8 +96,8 @@ ax = uiaxes(contentGrid);
 ax.Box = 'on';
 grid(ax, 'on');
 xlabel(ax, 'Gate Voltage V_g (V)');
-ylabel(ax, 'C_{gg} (pF)');
-title(ax, 'Real-Time Simulated vs Measured C-V_g');
+ylabel(ax, 'C / C_{ox}');
+title(ax, 'Real-Time Normalized C/C_{ox} vs V_g');
 
 % ===== BOTTOM METRICS =====
 lblMetrics = uilabel(mainGrid, 'Text', 'Measured metrics: N/A', 'FontWeight', 'bold', 'FontSize', 10);
@@ -111,6 +117,8 @@ controls.phiMs = moscap.guiHelpers.addSlider(electroGrid, spec.phiMs);
 controls.Qox = moscap.guiHelpers.addSlider(electroGrid, spec.Qox);
 
 controls.tauGen = moscap.guiHelpers.addSlider(nonIdealGrid, spec.tauGen);
+controls.lfFreq = moscap.guiHelpers.addSlider(nonIdealGrid, spec.lfFreq);
+controls.hfFreq = moscap.guiHelpers.addSlider(nonIdealGrid, spec.hfFreq);
 controls.smooth = moscap.guiHelpers.addSlider(nonIdealGrid, spec.smooth);
 controls.Rs = moscap.guiHelpers.addSlider(nonIdealGrid, spec.Rs);
 controls.Dit = moscap.guiHelpers.addSlider(nonIdealGrid, spec.Dit);
@@ -118,14 +126,11 @@ controls.tauIt = moscap.guiHelpers.addSlider(nonIdealGrid, spec.tauIt);
 controls.Cbt = moscap.guiHelpers.addSlider(nonIdealGrid, spec.Cbt);
 controls.tauBt = moscap.guiHelpers.addSlider(nonIdealGrid, spec.tauBt);
 controls.Cpar = moscap.guiHelpers.addSlider(nonIdealGrid, spec.Cpar);
-controls.stretch = moscap.guiHelpers.addSlider(nonIdealGrid, spec.stretch);
-controls.invGain = moscap.guiHelpers.addSlider(nonIdealGrid, spec.invGain);
-controls.invWidth = moscap.guiHelpers.addSlider(nonIdealGrid, spec.invWidth);
 
 % === SETUP STATE AND INITIAL PLOT ===
 state = struct();
 state.params = params;
-state.measured = [];
+state.measured = measured;
 state.sectionExpanded = struct('geom', true, 'electro', true, 'nonideal', true);
 state.baseSpec = spec;
 
@@ -133,6 +138,11 @@ sim0 = moscap.simulateMosCapCV(state.params);
 state.sim = sim0;
 state.curves = moscap.drawCurves(ax, sim0, state.measured);
 guidata(fig, state);
+
+if ~isempty(measured)
+    ddMeasCol.Items = measured.colNames;
+    ddMeasCol.Value = measured.colNames{measured.selectedCol};
+end
 
 % Set slider callbacks
 setSliderCallback(controls.tox);
@@ -147,12 +157,11 @@ setSliderCallback(controls.tauIt);
 setSliderCallback(controls.Cbt);
 setSliderCallback(controls.tauBt);
 setSliderCallback(controls.Cpar);
-setSliderCallback(controls.stretch);
 setSliderCallback(controls.Rs);
 setSliderCallback(controls.smooth);
-setSliderCallback(controls.invGain);
-setSliderCallback(controls.invWidth);
 setSliderCallback(controls.tauGen);
+setSliderCallback(controls.lfFreq);
+setSliderCallback(controls.hfFreq);
 
 updateMetricsLabel();
 
@@ -161,7 +170,11 @@ updateMetricsLabel();
     function applyPreset(mat)
         st = guidata(fig);
         st.params.material = mat;
+        if isfield(st.params, 'Na_eff_override')
+            st.params = rmfield(st.params, 'Na_eff_override');
+        end
         st.params = moscap.enforceMaterialConsistency(st.params, true);
+        st.params = applyMeasurementContext(st.params, st.measured);
         ddMaterial.Value = st.params.material;
 
         s = moscap.guiHelpers.sliderSpecs(st.params);
@@ -188,6 +201,30 @@ updateMetricsLabel();
         applyPreset(ddMaterial.Value);
     end
 
+    function onLoadParameters(~, ~)
+        [file, path] = uigetfile({'*.mat;*.json', 'Parameter Files (*.mat, *.json)'}, ...
+            'Select fitted MOSCAP parameters');
+        if isequal(file, 0)
+            return;
+        end
+        try
+            loadedParams = moscap.loadParametersFromFile(fullfile(path, file));
+        catch err
+            uialert(fig, err.message, 'Invalid Parameter File');
+            return;
+        end
+        st = guidata(fig);
+        st.params = applyMeasurementContext(loadedParams, st.measured);
+        ddMaterial.Value = normalizeMaterialValue(st.params.material);
+        s = moscap.guiHelpers.sliderSpecs(st.params);
+        moscap.guiHelpers.applyAllSpecsToControls(controls, s);
+        moscap.guiHelpers.refreshSliderValueLabels(controls);
+        st.sim = moscap.simulateMosCapCV(st.params);
+        st.curves = moscap.drawCurves(ax, st.sim, st.measured);
+        guidata(fig, st);
+        updateMetricsLabel();
+    end
+
     function onLoadMeasured(~, ~)
         [file, path] = uigetfile({'*.csv;*.txt', 'Data Files (*.csv, *.txt)'}, ...
             'Select measured C-Vg data');
@@ -197,13 +234,18 @@ updateMetricsLabel();
 
         measured = moscap.readMeasuredData(fullfile(path, file));
         if isempty(measured)
-            uialert(fig, 'Measured file must have at least 2 numeric columns: Vg, Cgg(pF).', ...
+            uialert(fig, 'Measured file must contain Vg and at least one numeric capacitance column.', ...
                 'Invalid File');
             return;
         end
 
         st = guidata(fig);
         st.measured = measured;
+        st.params = applyMeasurementContext(st.params, measured);
+        s = moscap.guiHelpers.sliderSpecs(st.params);
+        moscap.guiHelpers.applyAllSpecsToControls(controls, s);
+        moscap.guiHelpers.refreshSliderValueLabels(controls);
+        st.sim = moscap.simulateMosCapCV(st.params);
         ddMeasCol.Items = measured.colNames;
         ddMeasCol.Value = measured.colNames{measured.selectedCol};
         st.curves = moscap.drawCurves(ax, st.sim, st.measured); % redraw
@@ -234,7 +276,12 @@ updateMetricsLabel();
         p.L = controls.L.slider.Value * 1e-6;
         p.NF = max(1, round(controls.NF.slider.Value));
         p.tox = controls.tox.slider.Value * 1e-9;
-        p.Na_peak = controls.NaPeak.slider.Value * 1e22;
+        fittedNa = controls.NaPeak.slider.Value * 1e22;
+        if isfield(p, 'Na_eff_override')
+            p.Na_eff_override = fittedNa;
+        else
+            p.Na_peak = fittedNa;
+        end
         p.phi_ms = controls.phiMs.slider.Value;
         p.Qox_m2 = controls.Qox.slider.Value * 1e11;
         p.Dit_cm2eV = controls.Dit.slider.Value * 1e11;
@@ -242,14 +289,14 @@ updateMetricsLabel();
         p.Cbt_cm2eV = controls.Cbt.slider.Value * 1e11;
         p.tau_bt = controls.tauBt.slider.Value * 1e-6;
         p.Cpar_pF = controls.Cpar.slider.Value;
-        p.stretch = max(controls.stretch.slider.Value, 1);
         p.Rs = controls.Rs.slider.Value;
         p.smoothWindow = max(1, round(controls.smooth.slider.Value));
         p.tau_gen = controls.tauGen.slider.Value * 1e-6;
-        p.invGain = max(min(controls.invGain.slider.Value, 1), 0);
-        p.invWidth = max(controls.invWidth.slider.Value, 0.01);
-        p.lfFreqHz = 1;
-        p.hfFreqHz = 1e6;
+        p.lfFreqHz = controls.lfFreq.slider.Value * 1e3;
+        p.hfFreqHz = controls.hfFreq.slider.Value * 1e6;
+        if p.hfFreqHz <= p.lfFreqHz
+            p.hfFreqHz = 1.01 * p.lfFreqHz;
+        end
 
         p = moscap.enforceMaterialConsistency(p, false);
 
@@ -265,15 +312,17 @@ updateMetricsLabel();
 
     function updateMetricsLabel()
         st = guidata(fig);
+        Cox_pF = st.sim.Cox_eff * 1e12;
+        CminRatio = min(st.sim.Chigh) / max(st.sim.Cox_eff, eps);
         if isempty(st.measured)
             lblMetrics.Text = sprintf(['Measured metrics: N/A | ', ...
-                'Material=%s | Sim Cmax = %.3f pF, Cmin = %.3f pF, Vfb = %.3f V, Na_eff = %.2e m^-3'], ...
-                st.params.material, max(st.sim.Cmeas) * 1e12, min(st.sim.Cmeas) * 1e12, st.sim.Vfb, st.sim.Na_eff);
+                'Material=%s | C_{ox} = %.2f pF, Cmin/Cox = %.3f, Vfb = %.3f V, Na_eff = %.2e m^-3'], ...
+                st.params.material, Cox_pF, CminRatio, st.sim.Vfb, st.sim.Na_eff);
         else
-            [rmsePf, maePf, nPts] = moscap.compareMeasured(st.sim, st.measured);
-            lblMetrics.Text = sprintf(['Measured metrics: N = %d, RMSE = %.3f pF, MAE = %.3f pF | ', ...
-                'Material=%s | Sim Cmax = %.3f pF, Cmin = %.3f pF'], ...
-                nPts, rmsePf, maePf, st.params.material, max(st.sim.Cmeas) * 1e12, min(st.sim.Cmeas) * 1e12);
+            [rmseN, maeN, nPts] = moscap.compareMeasured(st.sim, st.measured);
+            lblMetrics.Text = sprintf(['Selected measured trace: N = %d, RMSE = %.2f%%, MAE = %.2f%% | ', ...
+                'Material=%s | C_{ox} = %.2f pF, Cmin/Cox = %.3f'], ...
+                nPts, rmseN * 100, maeN * 100, st.params.material, Cox_pF, CminRatio);
         end
     end
 
@@ -282,6 +331,28 @@ updateMetricsLabel();
         ctrl.slider.ValueChangedFcn = @onAnySliderChanged;
     end
 
+end
+
+function params = applyMeasurementContext(params, measured)
+%APPLYMEASUREMENTCONTEXT Configure sweep and modeled frequency branches.
+
+if isempty(measured)
+    return;
+end
+if isfield(measured, 'frequenciesHz')
+    f = measured.frequenciesHz(isfinite(measured.frequenciesHz) & ...
+        measured.frequenciesHz > 0);
+    if numel(f) >= 2
+        params.lfFreqHz = min(f);
+        params.hfFreqHz = max(f);
+    elseif numel(f) == 1
+        params.hfFreqHz = f(1);
+    end
+end
+if ~isempty(measured.Vg)
+    nPoints = max(301, numel(measured.Vg));
+    params.Vg = linspace(min(measured.Vg), max(measured.Vg), nPoints);
+end
 end
 
 function value = normalizeMaterialValue(value)
@@ -293,7 +364,7 @@ if nargin == 0 || isempty(value)
 end
 
 switch lower(strtrim(value))
-    case {'sic', '4h-sic', '4h_siC', '4h sic'}
+    case {'sic', '4h-sic', '4h_sic', '4h sic'}
         value = '4H-SiC';
     otherwise
         value = 'Si';

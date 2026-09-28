@@ -6,9 +6,14 @@ A modular MATLAB framework for simulating MOS capacitor C-V characteristics with
 
 - Solves the semiconductor surface potential with a damped Newton method
 - Uses a Poisson-Boltzmann charge model for accumulation, depletion, and inversion
-- Includes SiC-specific non-ideal behavior driven by `Dit`, carrier generation, frequency dispersion, and fixed oxide charge
-- Compares simulation against measured C-V data
+- Splits the surface capacitance into two physical limits directly from the surface potential:
+  - **Low-frequency** — minority carriers respond (curve recovers toward `Cox`)
+  - **High-frequency** — inversion charge is frozen, so the curve saturates at `Cmin`
+- Plots everything **normalized as `C/Cox`** so shape is compared independent of area/`tox`
+- Includes non-ideal behavior driven by `Dit`, border traps, carrier generation (`tau_gen`), poly depletion, and series resistance
+- Compares simulation against measured C-V data and fits SiC parameters to normalized data
 - Provides both batch execution and an interactive MATLAB GUI
+
 ## Preview of the MOSCAP Visualizer
 
 ![MOSCAP_behavior](docs/MOSCAP_CV_behavior_with_non_ideal_scnerio.gif)
@@ -17,7 +22,6 @@ A modular MATLAB framework for simulating MOS capacitor C-V characteristics with
 
 Video Preview
 ![MOSCAP_si_behavioir_3](docs/MOSCAP_C_V_model.gif)
-
 
 ## Core Equations
 
@@ -49,15 +53,32 @@ Q_s(psi_s) = -sign(psi_s) * sqrt(2 * epsilon_Si * q * N_A * V_T * F(psi_s))
 with:
 
 ```text
-F(psi_s) = exp(-psi_s / V_T) + psi_s / V_T - 1
-         + (n_i / N_A)^2 * (exp(psi_s / V_T) - psi_s / V_T - 1)
+F(psi_s) = exp(-psi_s / V_T) + psi_s / V_T - 1        (majority: accumulation + depletion)
+         + (n_i / N_A)^2 * (exp(psi_s / V_T) - psi_s / V_T - 1)   (minority: inversion)
 ```
 
-Measured capacitance model:
+Surface capacitance (Nicollian–Brews two-limit split, computed in `+moscap/surfaceCapacitances.m`):
+
+```text
+C_s,LF ∝ |dF/du|          minority carriers respond      (u = psi_s / V_T)
+C_s,HF ∝ |dF_maj/du|      inversion charge frozen -> Cmin
+```
+
+A generation factor `gen(omega) = 1 / (1 + (omega * tau_gen)^2)` interpolates between the
+frozen (HF) and full (LF) limits, so `tau_gen` is the single physical knob for inversion response.
+
+Network + measured capacitance model:
 
 ```text
 C_total = (C_ox,eff * (C_s + C_it + C_bt)) / (C_ox,eff + C_s + C_it + C_bt) + C_par
 C_meas  = C_total / (1 + (omega * R_s * C_total)^2)
+```
+
+Normalized display (all plots and the optimizer objective use this):
+
+```text
+C/Cox = C_total / C_ox,eff          (model)
+C/Cox = C / max(C_accumulation)     (measured)
 ```
 
 ## Material Support
@@ -70,33 +91,44 @@ Supported materials:
 Material-dependent properties include:
 
 - dielectric constant
-- intrinsic carrier concentration
+- intrinsic carrier concentration (`ni` for 4H-SiC is ~12 orders of magnitude below Si)
 - doping bounds
-- generation/recombination defaults
-- inversion-response tuning for SiC
+- generation time (`tau_gen`) defaults — short for Si, long (ms) for SiC
 
 ## Main Files
 
 - `main_moscap_app.m`: main entry point
 - `+moscap/defaultParameters.m`: default parameter set
 - `+moscap/simulateMosCapCV.m`: core solver
+- `+moscap/surfaceCapacitances.m`: LF/HF surface-capacitance split
+- `+moscap/qsurfaceAndDerivative.m`: Poisson–Boltzmann surface charge
+- `+moscap/normalizeCV.m`: C/Cox normalization helper
 - `+moscap/launchMosCapGui.m`: interactive GUI
 - `+moscap/plotSimulationOnly.m`: static plots
-- `+moscap/printModelReview.m`: console summary
-- `+moscap/printValidationReport.m`: validation checks
+- `+moscap/optimizeSiCParameters.m`: SiC parameter fit to normalized C-V
+- `optimize_SiC_CV_fit.m`: end-to-end optimization workflow script
+- `verify_simplified_model.m`: regression check (HF saturates at Cmin, no flip-flop)
 
 ## Usage
 
-Run from MATLAB:
+Run the app from MATLAB (from the repo root, so the `+moscap` package is on the path):
 
 ```matlab
-main_moscap_app
+main_moscap_app        % or the legacy wrapper: capacitor_model
 ```
 
-Or use the legacy wrapper:
+Fit SiC parameters to measured normalized C-V:
 
 ```matlab
-capacitor_model
+optimize_SiC_CV_fit    % edit the USER CONFIGURATION block for your CSV
+```
+
+Diagnostic/analysis scripts live in `diagnostics/`. Run them from the repo root with the root on
+the path:
+
+```matlab
+addpath(pwd)                          % once per session, from the repo root
+run('diagnostics/compare_si_sic.m')
 ```
 
 ## GUI Features
@@ -120,35 +152,82 @@ The validation report checks:
 
 ## Notes on SiC Behavior
 
-For 4H-SiC, inversion is strongly affected by trap dynamics and minority-carrier generation. The model therefore separates low-frequency and high-frequency responses so the U-shaped branch and the depletion-limited branch can both be inspected from the same surface-potential solution.
+For 4H-SiC the intrinsic carrier concentration is extremely small, so strong inversion requires
+large band bending and the DC surface-potential solve pins `psi_s` near `2·phi_F`. Because the
+high-frequency branch freezes the inversion charge, the HF curve saturates at `Cmin` (no recovery
+to `Cox`), and with SiC's long `tau_gen` even the low-frequency branch shows little inversion
+recovery — the physically expected deep-depletion-like behavior.
 
 ## Repository Layout
 
 ```text
 C_V/
-+-- capacitor_model.m
-+-- main_moscap_app.m
-+-- +moscap/
-    +-- defaultParameters.m
-    +-- simulateMosCapCV.m
-    +-- qsurfaceAndDerivative.m
-    +-- enforceMaterialConsistency.m
-    +-- materialProperties.m
-    +-- materialNaBounds.m
-    +-- drawCurves.m
-    +-- plotSimulationOnly.m
-    +-- printModelReview.m
-    +-- printValidationReport.m
-    +-- launchMosCapGui.m
+├── main_moscap_app.m          entry point
+├── capacitor_model.m          legacy wrapper
+├── optimize_SiC_CV_fit.m      optimization workflow
+├── verify_simplified_model.m  regression check
+├── Readme.md
+├── +moscap/                   core package (solver, GUI, IO, optimizer)
+│   ├── simulateMosCapCV.m
+│   ├── surfaceCapacitances.m
+│   ├── qsurfaceAndDerivative.m
+│   ├── normalizeCV.m
+│   ├── defaultParameters.m / enforceMaterialConsistency.m
+│   ├── materialProperties.m / materialNaBounds.m
+│   ├── drawCurves.m / plotSimulationOnly.m / launchMosCapGui.m / guiHelpers.m
+│   ├── readMeasuredData.m / loadMeasuredDataTemplate.m / getMeasuredCgg.m
+│   ├── compareMeasured.m / printModelReview.m / printValidationReport.m
+│   ├── optimizeSiCParameters.m / loadParametersFromFile.m / saveParametersToFile.m
+│   └── PHYSICS_MODEL.md
+├── examples/                  example measured CSVs
+├── diagnostics/               standalone analysis/diagnostic scripts
+└── docs/                      figures, schematics, references
 ```
 
 ## Requirements
 
 - MATLAB R2021b or newer
-- No external toolboxes required
+- Optimization Toolbox (`fmincon`) for `optimize_SiC_CV_fit.m`; the core model/GUI need no toolboxes
 
-## Author
+## Authors
 
-mi031
+Md Majharul Islam*
+
+*mi031@uark.edu
+
+Aireen Amir Jalal
+
+Priyam Saha
+
+Kevin Chen
+
+Zakia Sultana
+
+Abu Shahir Md Khalid Hasan
+
+Peter Wilson
+
+Homer A. Mantooth
+
+##### **Cite Text**
+
+```
+@inproceedings{islam2026surface,
+  author    = {
+    Md Majharul Islam and
+    Aireen Amir Jalal and
+    Priyam Saha and
+    Kevin Chen and
+    Zakia Sultana and
+    Abu Shahir Md Khalid Hasan and
+    Peter Wilson and
+    Homer A. Mantooth
+  },
+  title     = {Surface-Potential-Based Modeling of MOS Capacitors Including Non-Ideal Effects for SiC CMOS Processes},
+  booktitle = {2026 IEEE 13th Workshop on Wide Bandgap Power Devices and Applications (WiPDA)},
+  year      = {2026},
+  publisher = {IEEE}
+}
+```
 
 Last updated: July 2026

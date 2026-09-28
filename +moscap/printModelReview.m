@@ -6,9 +6,10 @@ Vg = sim.Vg;
 fprintf('\n================ MOSCAP Physics Review ================\n');
 fprintf('Electrostatics: implicit psi_s solved by Newton from Vg = Vfb + psi_s - Qs/Cox_area.\n');
 fprintf('Semiconductor charge: exact Poisson-Boltzmann integral form via F(psi_s).\n');
-fprintf('Capacitance path: surface-potential solution feeds low- and high-frequency compact responses.\n');
+fprintf('Capacitance path: analytic surface capacitance split into low-frequency (minority responds)\n');
+fprintf('  and high-frequency (inversion charge frozen -> saturates at Cmin) limits.\n');
 fprintf('Doping model: Gaussian Na(x) integrated to an effective Na_eff for 1D compact use.\n');
-fprintf('Non-ideal blocks enabled: Dit, border traps, poly depletion, Rs, Cpar, inversion response.\n');
+fprintf('Non-ideal blocks enabled: Dit, border traps, poly depletion, Rs, Cpar.\n');
 
 fprintf('\n---------------- Parameter Summary ----------------\n');
 fprintf('Area                = %.3e m^2\n', sim.Area);

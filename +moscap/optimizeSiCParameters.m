@@ -102,25 +102,26 @@ if verbose
 end
 
 % ===== PARAMETER SELECTION FOR OPTIMIZATION =====
-% Key tunable parameters for SiC deep depletion:
-% 1. Na_peak - affects depletion width
-% 2. tau_gen - affects frequency response (1-10 ms range for SiC)
-% 3. Dit - affects inversion charge
-% 4. invGain - affects inversion recovery magnitude
-% 5. phiF_cap - affects band-bending
+% Shape parameters of the normalized (C/Cox) curve. Absolute Cox (area, tox)
+% is normalized out, so only shape/position knobs are fitted:
+% 1. Na_peak - depletion width -> sets Cmin/Cox ratio and depletion slope
+% 2. tau_gen - carrier generation time -> low- vs high-frequency inversion split
+% 3. Dit     - interface trap density -> stretch-out / bump magnitude
+% 4. phi_ms  - metal-semiconductor work function -> flat-band (horizontal) shift
+% 5. tau_it  - interface trap response time -> trap dispersion vs frequency
 
-% Map to optimization vector x = [Na, tau_gen, Dit, invGain, phiF_cap]
+% Map to optimization vector x = [Na, tau_gen, Dit, phi_ms, tau_it]
 x0 = [
     initParams.Na_peak / 1e22;           % Normalize to 1e22 m^-3 scale
     initParams.tau_gen * 1e3;            % Convert to ms
     initParams.Dit_cm2eV / 1e11;         % Normalize to 1e11 cm^-2 eV^-1
-    initParams.invGain;                  % Already 0-1
-    initParams.phiF_cap                  % Fermi potential (V)
+    initParams.phi_ms;                   % Work-function difference (V)
+    initParams.tau_it * 1e6              % Interface trap time (us)
 ];
 
 % Bounds (lower, upper) for each parameter
-lb = [0.1,   0.1,   0.1,  0,    0.5];   % Lower bounds
-ub = [100,   10,    100,  1,    1.5];   % Upper bounds
+lb = [0.01,  0.01,  0.1,  -2,   0.01];   % Lower bounds
+ub = [100,   100,   200,   2,   1e5];    % Upper bounds
 
 % ===== OBJECTIVE FUNCTION =====
 objFun = @(x) objectiveFunction(x, initParams, measVg, measClow, measChigh, wLow, wHigh, hasMeasHigh);
@@ -150,8 +151,8 @@ optimParams = initParams;
 optimParams.Na_peak = xOpt(1) * 1e22;
 optimParams.tau_gen = xOpt(2) * 1e-3;
 optimParams.Dit_cm2eV = xOpt(3) * 1e11;
-optimParams.invGain = xOpt(4);
-optimParams.phiF_cap = xOpt(5);
+optimParams.phi_ms = xOpt(4);
+optimParams.tau_it = xOpt(5) * 1e-6;
 
 % Re-apply SiC consistency
 optimParams = moscap.enforceMaterialConsistency(optimParams, false);
@@ -192,8 +193,8 @@ if verbose
     fprintf('  Na_peak:    %.2e → %.2e m^-3\n', initParams.Na_peak, optimParams.Na_peak);
     fprintf('  tau_gen:    %.2f → %.2f ms\n', initParams.tau_gen*1e3, optimParams.tau_gen*1e3);
     fprintf('  Dit:        %.2e → %.2e cm^-2 eV^-1\n', initParams.Dit_cm2eV, optimParams.Dit_cm2eV);
-    fprintf('  invGain:    %.3f → %.3f\n', initParams.invGain, optimParams.invGain);
-    fprintf('  phiF_cap:   %.3f → %.3f V\n', initParams.phiF_cap, optimParams.phiF_cap);
+    fprintf('  phi_ms:     %.3f → %.3f V\n', initParams.phi_ms, optimParams.phi_ms);
+    fprintf('  tau_it:     %.2f → %.2f us\n', initParams.tau_it*1e6, optimParams.tau_it*1e6);
 end
 
 % ===== OUTPUT STRUCT =====
@@ -221,28 +222,28 @@ try
     params.Na_peak = x(1) * 1e22;
     params.tau_gen = x(2) * 1e-3;
     params.Dit_cm2eV = x(3) * 1e11;
-    params.invGain = x(4);
-    params.phiF_cap = x(5);
-    
+    params.phi_ms = x(4);
+    params.tau_it = x(5) * 1e-6;
+
     % Re-apply SiC consistency
     params = moscap.enforceMaterialConsistency(params, false);
-    
+
     % Simulate
     sim = moscap.simulateMosCapCV(params);
-    
-    % Interpolate to measurement grid
+
+    % Interpolate simulation to the measurement grid
     CsimLow = interp1(sim.Vg, sim.Clow, measVg, 'linear', 'extrap');
     if hasMeasHigh
         CsimHigh = interp1(sim.Vg, sim.Chigh, measVg, 'linear', 'extrap');
     else
         CsimHigh = [];
     end
-    
-    % Compute weighted RMSE
+
+    % Compute weighted RMSE on the normalized C/Cox curves
     fval = computeRMSE(CsimLow, measClow, CsimHigh, measChigh, wLow, wHigh);
-    
+
     % Penalize non-physical results (negative or zero capacitance)
-    if any(CsimLow <= 0) || any(CsimHigh <= 0)
+    if any(CsimLow <= 0) || (hasMeasHigh && any(CsimHigh <= 0))
         fval = fval * 10;  % Large penalty
     end
     
@@ -254,14 +255,14 @@ end
 end
 
 function rmse = computeRMSE(CsimLow, CmeasLow, CsimHigh, CmeasHigh, wLow, wHigh)
-%COMPUTERMSE Weighted RMSE of capacitance.
+%COMPUTERMSE Weighted RMSE on normalized C/Cox curves (dimensionless).
+%   Each curve is normalized to its own accumulation maximum before comparison,
+%   so the fit targets curve shape independent of absolute Cox (area / tox).
 
-% Low-frequency RMSE
-rmseLow = sqrt(mean((CsimLow - CmeasLow).^2));
+rmseLow = sqrt(mean((moscap.normalizeCV(CsimLow) - moscap.normalizeCV(CmeasLow)).^2));
 
-% High-frequency RMSE (if available)
 if ~isempty(CsimHigh) && ~isempty(CmeasHigh)
-    rmseHigh = sqrt(mean((CsimHigh - CmeasHigh).^2));
+    rmseHigh = sqrt(mean((moscap.normalizeCV(CsimHigh) - moscap.normalizeCV(CmeasHigh)).^2));
     rmse = wLow * rmseLow + wHigh * rmseHigh;
 else
     rmse = rmseLow;

@@ -1,0 +1,24 @@
+# MATLAB autosave / temp files
+*.asv
+*.m~
+slprj/
+octave-workspace
+
+# Stray AI chat dumps
+chat.json
+**/chat.json
+
+# Generated diagnostic figures (regenerate via diagnostics/ scripts)
+model_diagnostic.png
+model_diagnostic.fig
+compare_materials_after_fix.png
+diagnose_*.png
+/diagnostics/**
+/.claude
+/.vscode
+/docs/Full_paper_WiPDa2026_m21633-islam final.pdf
+/docs/WIPDA_Final_paper_mi031_v5.pdf
+/docs/WIPDA_Final_paper_mi031_v5.docx
+/docs/SIC_PARAMETER_OPTIMIZATION_README.md
+/docs/process.md
+/docs/moscap_visual_abstract.mmd

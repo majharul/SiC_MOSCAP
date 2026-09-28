@@ -12,7 +12,8 @@
 %   
 %   where:
 %   - Vfb = flat-band voltage = φ_ms - Qox/Cox_area
-%   - φ_ms = poly-Si/SiO2 work function difference (typically -3.15 V for n-poly on p-well)
+%   - φ_ms = gate/semiconductor work-function difference (default -1.1 V for Al on p-Si;
+%            ~+0.8 V for poly on p-type SiC). Fitted as a flat-band shift knob.
 %   - Qox = fixed oxide charge (parameterized as Qox_m2 × area)
 %   - ψ_s = surface potential at SiO2/semiconductor interface
 %   - Qs(ψ_s) = charge density from Poisson-Boltzmann equation
@@ -25,10 +26,14 @@
 %   - exp terms: electron and hole concentrations far from surface
 %   - (ni/Na)² term: handles weak inversion and intrinsic carrier effects
 %   - For Si: ni ≈ 1.45×10^16 m^-3 (small compared to Na) → strong band bending
-%   - For 4H-SiC: ni ≈ 1-1000 m^-3 (VERY small) → extreme band bending needed for inversion
+%   - For 4H-SiC: ni ≈ 10^-2 m^-3 at 300 K → extreme band bending needed for inversion
 %
-% Semiconductor Capacitance:
-%   Cs = |dQs/dψ_s| × Area (per unit voltage)
+% Semiconductor Capacitance (two-limit split, +moscap/surfaceCapacitances.m):
+%   Low-frequency  (minority carriers respond):  Cs_LF ∝ |dF/du|        (u = ψ_s/Vt)
+%   High-frequency (inversion charge frozen): majority-carrier response is
+%     evaluated up to ψ_s = 2·φ_F and then held at the maximum-depletion value,
+%     producing the conventional equilibrium Cmin plateau.
+%   Frequency blend: Cs(ω) = Cs_HF + gen(ω)·(Cs_LF - Cs_HF),  gen(ω) = 1/(1+(ω·τ_gen)²)
 %
 % Total Oxide Capacitance Network:
 %   Cox_eff = parallel(Cox, Cpoly)  [poly depletion in series with oxide]
@@ -67,9 +72,8 @@
 %   
 %   Effect: High-frequency attenuation and phase lag
 %
-% Stretch-Out Factor:
-%   Vg_eff = Vfb + (Vg - Vfb) / stretch
-%   stretch > 1.0: Broadens C-V transition (non-ideal effects, trap dynamics)
+% (The former empirical "stretch-out factor" has been removed: C-V broadening now
+%  arises from the physical Dit/border-trap terms and the surface-potential solution.)
 %
 % 3. MATERIAL-SPECIFIC BEHAVIOR
 % =====================================================
@@ -95,10 +99,10 @@
 %
 %   Inversion (Vg >> Vfb + 2·φ_F):
 %     ψ_s > 2·φ_F (surface becomes n-type)
-%     τ_gen-LIMITED RESPONSE: High freq → Cs small, Ceff small (deep depletion)
-%                             Low freq → Cs large, Ceff → Cox_eff (minority carriers fill)
+%     High freq → inversion charge is AC-frozen, so Ceff stays at Cmin
+%     Low freq  → inversion charge can respond, so Ceff → Cox_eff
 %     Low-Freq C-V: C_LF ≈ Cox in inversion (classic Si behavior)
-%     High-Freq C-V: C_HF << Cox in deep depletion (traps don't respond, gen-recomb too slow)
+%     High-Freq C-V: C_HF << Cox at the equilibrium Cmin plateau
 %
 % PHYSICAL REASONING:
 %   At low frequency, thermal generation rate ~1/(τ_gen) generates minority carriers fast enough
@@ -106,11 +110,10 @@
 %
 % 4H-SiC:
 % --------
-% - ni ~ 1-1000 m^-3 (VERY WEAK intrinsic generation, process-dependent)
+% - ni ~ 10^-2 m^-3 at 300 K (very small equilibrium carrier density)
 % - εr = 9.7
-% - Na_peak = 1-10×10^15 m^-3 (lower doping, wider junction depth)
-% - τ_gen ~ 1-3 ms (SLOW minority carrier generation at room temp)
-% - τ_it ~ 1-10 μs (slightly longer than Si, defect-related)
+% - Na must be reported in unambiguous units and extracted for the device
+% - Generation and trap time constants require transient/multifrequency data
 %
 % C-V BEHAVIOR:
 %   Accumulation: Same as Si (holes abundant, no generation needed)
@@ -119,26 +122,15 @@
 %   Depletion: Similar to Si (band bending, Cs drops)
 %
 %   Inversion (Vg >> Vfb + 2·φ_F):
-%     Deep Depletion Mode (both LF and HF):
-%       ψ_s >> 2·φ_F (extreme band bending to get Qs negative)
-%       BUT τ_gen ≈ milliseconds >> measurement timescale
-%       → Minority carriers CANNOT respond even at low frequency
-%       → Cs remains small, never accumulates inversion charge
-%       → Ceff remains small (~Cdep) even at low frequency
-%     
-%     Measured Response:
-%       C_LF ≈ C_HF ≈ Cdep (WEAK OR NO INVERSION RECOVERY)
-%       NO return to Cox unless:
-%         a) Material has better intrinsic generation (purer SiC, higher T)
-%         b) forceLowFreqInversion = true (artificial/theoretical limit)
-%         c) Frequency extremely low (< Hz) and tau_gen << measurement time
+%     Conventional equilibrium HF C-V remains at Cmin. A faster DC sweep
+%     than the minority-carrier supply can support may cause nonequilibrium
+%     deep depletion below Cmin. Establishing that mechanism requires C-t,
+%     pulsed C-V, illumination, temperature, or sweep-rate measurements.
 %
-% PHYSICAL REASONING:
-%   Generation rate = n_i² / (τ_gen × Na × exp(φ_F))
-%   
-%   For Si: Rapid enough at room temp that LF inversion is observable (10 mHz already sufficient)
-%   For 4H-SiC: Generation rate SO SMALL that practical frequencies don't see inversion
-%              → Appears as "pinned" C-V with constant Cmeas ≈ Cdep in strong inversion
+% IMPORTANT IDENTIFIABILITY LIMIT:
+%   A single HF trace cannot extract generation lifetime. The implemented
+%   tau_gen frequency blend is a compact sensitivity model, not a transient
+%   SRH solution and not evidence of deep depletion by itself.
 %
 % 5. PARAMETER EXTRACTION & PDK CALIBRATION
 % =====================================================
@@ -157,18 +149,14 @@
 %   6. Fit tau_gen, tau_it by frequency sweep 1 Hz - 10 MHz
 %   7. Verify inversion behavior (should match material physics)
 %
-% Material Preset Presets (Built-in):
+% Material Presets (Built-in):
 %   Si:
 %     Na_peak = 5e23 m^-3
 %     tau_gen = 5-10 μs
-%     phiF_cap = 1.10 V
-%     forceLowFreqInversion = false (natural physics)
 %
 %   4H-SiC RUN2-2022 (Cree/Wolfspeed typical):
 %     Na_peak = 1e15 m^-3 (≈10 μm depletion width!)
 %     tau_gen = 3 ms
-%     phiF_cap = 0.85 V
-%     forceLowFreqInversion = true (show theoretical low-freq limit)
 %   
 %   ...other SiC processes with different depth/doping tradeoffs
 %
@@ -178,8 +166,12 @@
 % Complex Number Avoidance:
 %   - sqrt(Vt·F) can produce imaginary if F < 0
 %     → SOLUTION: Guard F ≥ 1e-30, extract real parts
-%   - sign(psi) has discontinuity at psi = 0
-%     → SOLUTION: Use tanh(psi/psiScale) for smooth transition
+%   - sign(psi) has a branch at psi = 0
+%     → Uses a hard sign() with psi=0 defaulting to +1 (a smooth tanh sign was
+%       found to create a non-physical W-shaped artifact and was removed)
+%   - exp(psi/Vt) overflow for large band bending
+%     → eta = psi/Vt is clamped to ±200 (safe from overflow; large enough that SiC
+%       pins on physics, not on the clamp)
 %   - Denominator in parallel formula can be zero
 %     → SOLUTION: Check and replace with small positive value
 %

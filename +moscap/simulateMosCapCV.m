@@ -17,6 +17,13 @@ ni = params.ni;
 x = linspace(0, params.xmax, 800);
 Na_profile = params.Na_peak .* exp(-((x - params.Rp) .^ 2) ./ (2 * params.sigma ^ 2));
 Na_eff = trapz(x, Na_profile) / params.xmax;
+% The Poisson-Boltzmann expression below assumes uniform doping. An
+% extractor can supply that effective concentration directly; averaging an
+% implant over the arbitrary xmax is retained only for compatibility.
+if isfield(params, 'Na_eff_override') && ~isempty(params.Na_eff_override) && ...
+        isfinite(params.Na_eff_override) && params.Na_eff_override > 0
+    Na_eff = params.Na_eff_override;
+end
 [NaMin, NaMax] = moscap.materialNaBounds(params.material);
 Na_eff = min(max(Na_eff, NaMin), NaMax);
 

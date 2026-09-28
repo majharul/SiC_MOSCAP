@@ -32,10 +32,9 @@ params.tau_gen = max(params.tau_gen, 1e-9);
 params.Rp = max(params.Rp, 0);
 params.sigma = max(params.sigma, 1e-9);
 params.xmax = max(params.xmax, 5 * params.sigma);
-if strcmpi(strtrim(params.material), '4H-SiC')
-    params.Qox_m2 = max(params.Qox_m2, 1e15);
-    params.Dit_cm2eV = max(params.Dit_cm2eV, 1e11);
-end
+% Fixed oxide charge is signed and both Qox and Dit may legitimately be
+% zero in an ideal/reference model. Do not impose non-ideal effects merely
+% because the selected material is 4H-SiC.
 end
 
 function params = applySiCProcessPreset(params)
