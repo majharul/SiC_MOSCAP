@@ -197,8 +197,6 @@ C_V/
 
 Md Majharul Islam*
 
-*mi031@uark.edu
-
 Aireen Amir Jalal
 
 Priyam Saha
