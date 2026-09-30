@@ -195,21 +195,6 @@ C_V/
 
 ## Authors
 
-Md Majharul Islam*
-
-Aireen Amir Jalal
-
-Priyam Saha
-
-Kevin Chen
-
-Zakia Sultana
-
-Abu Shahir Md Khalid Hasan
-
-Peter Wilson
-
-Homer A. Mantooth
 
 ##### **Cite Text**
 
